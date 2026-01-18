@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, ArrowCounterClockwise } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +18,38 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [showCompletion, setShowCompletion] = useState(false)
   const [direction, setDirection] = useState(0)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const speechSynthRef = useRef<SpeechSynthesis | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      speechSynthRef.current = window.speechSynthesis
+    }
+  }, [])
+
+  const speakWord = useCallback((word: string) => {
+    if (!speechSynthRef.current) {
+      toast.error('Speech synthesis not supported in this browser')
+      return
+    }
+
+    speechSynthRef.current.cancel()
+
+    const utterance = new SpeechSynthesisUtterance(word)
+    utterance.lang = 'en-US'
+    utterance.rate = 0.85
+    utterance.pitch = 1.0
+    utterance.volume = 1.0
+
+    utterance.onstart = () => setIsSpeaking(true)
+    utterance.onend = () => setIsSpeaking(false)
+    utterance.onerror = () => {
+      setIsSpeaking(false)
+      toast.error('Unable to pronounce word')
+    }
+
+    speechSynthRef.current.speak(utterance)
+  }, [])
 
   useEffect(() => {
     const fetchWords = async () => {
@@ -52,6 +84,19 @@ function App() {
 
     fetchWords()
   }, [words, setWords])
+
+  useEffect(() => {
+    const wordList = words || []
+    const index = currentIndex || 0
+    const word = wordList[index]
+    
+    if (word && !isLoading && !error) {
+      const timer = setTimeout(() => {
+        speakWord(word)
+      }, 400)
+      return () => clearTimeout(timer)
+    }
+  }, [currentIndex, words, isLoading, error, speakWord])
 
   const goToNext = useCallback(() => {
     const wordList = words || []
@@ -182,11 +227,25 @@ function App() {
                     duration: 0.3,
                     ease: [0.4, 0, 0.2, 1]
                   }}
-                  className="text-center"
+                  className="text-center space-y-6"
                 >
                   <h1 className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-foreground">
                     {currentWord}
                   </h1>
+                  <Button
+                    onClick={() => speakWord(currentWord)}
+                    variant="ghost"
+                    size="lg"
+                    className="group text-secondary hover:text-secondary/80 transition-all hover:scale-110 active:scale-95"
+                    disabled={isSpeaking}
+                  >
+                    <motion.div
+                      animate={isSpeaking ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                      transition={{ duration: 0.5, repeat: isSpeaking ? Infinity : 0 }}
+                    >
+                      <SpeakerHigh weight="fill" className="text-3xl" />
+                    </motion.div>
+                  </Button>
                 </motion.div>
               </AnimatePresence>
             </div>

@@ -13,11 +13,11 @@ This is a single-purpose vocabulary tool with state management for word progress
 ## Essential Features
 
 **Word Display**
-- Functionality: Shows current English word in large, readable typography
-- Purpose: Primary learning interface for vocabulary acquisition
+- Functionality: Shows current English word in large, readable typography with audio pronunciation
+- Purpose: Primary learning interface for vocabulary acquisition with proper pronunciation
 - Trigger: App loads or user navigates to next/previous word
-- Progression: App loads → Fetch word list → Display first word → Show word with clean typography
-- Success criteria: Word is clearly legible, centered, and visually prominent
+- Progression: App loads → Fetch word list → Display first word → Show word with clean typography → Auto-play pronunciation after 400ms delay
+- Success criteria: Word is clearly legible, centered, visually prominent, and automatically pronounced
 
 **Word Navigation**
 - Functionality: Navigate between words using next/previous controls or keyboard
@@ -40,12 +40,21 @@ This is a single-purpose vocabulary tool with state management for word progress
 - Progression: App loads → Check cache → Fetch if needed → Parse word list → Store locally → Begin display
 - Success criteria: Words load within 2 seconds, persist between sessions
 
+**Audio Pronunciation**
+- Functionality: Automatically pronounce each word using Web Speech API and provide manual replay button
+- Purpose: Help users learn correct pronunciation of vocabulary words
+- Trigger: Automatic on word change (400ms delay) or manual button click
+- Progression: Word displayed → Brief delay → Speak word → Visual feedback during speech → Allow manual replay
+- Success criteria: Clear audio pronunciation, visual indication during playback, manual replay option available
+
 ## Edge Case Handling
 
 - **Network Failure**: Display cached words if available, show helpful error message if no cache exists
 - **End of List**: Show completion celebration, allow restart from beginning
 - **Rapid Navigation**: Debounce/throttle animations to prevent UI jank
 - **Invalid Word Data**: Filter out empty/malformed entries, fallback to curated list
+- **Browser Audio Support**: Gracefully handle browsers without Web Speech API support, show toast notification
+- **Audio Playback Errors**: Cancel previous speech before starting new, handle errors with user feedback
 
 ## Design Direction
 
@@ -99,6 +108,7 @@ Animations create a sense of tangible physicality - cards should feel like they 
 - **Icon Selection**: 
   - CaretLeft/CaretRight for navigation
   - ArrowCounterClockwise for restart
+  - SpeakerHigh for audio pronunciation
   - Check for completion
 - **Spacing**: 
   - Generous padding (p-12) on main card
