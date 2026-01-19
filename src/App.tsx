@@ -316,7 +316,7 @@ function App() {
       definitionAlternationTimerRef.current = setTimeout(() => {
         setDefinitionWordStates(prev => {
           const newStates = [...prev]
-          newStates[currentWordIndex] = !newStates[currentWordIndex]
+          newStates[currentWordIndex] = true
           return newStates
         })
         currentWordIndex++
@@ -646,40 +646,35 @@ function App() {
                           const showRussian = definitionWordStates[index] || false
                           
                           return (
-                            <motion.span
-                              key={index}
-                              className="inline-block relative mx-1"
-                              style={{ minWidth: '1ch' }}
-                            >
+                            <span key={index} className="inline-block mx-1">
                               <motion.span
-                                className="absolute inset-0 whitespace-nowrap"
+                                className="inline-block"
                                 animate={{
                                   opacity: showRussian ? 0 : 1,
-                                  y: showRussian ? -5 : 0,
-                                  filter: showRussian ? 'blur(4px)' : 'blur(0px)'
+                                  filter: showRussian ? 'blur(4px)' : 'blur(0px)',
+                                  scale: showRussian ? 0.9 : 1
                                 }}
                                 transition={{
-                                  duration: 0.4,
+                                  duration: 0.5,
                                   ease: [0.4, 0, 0.2, 1]
                                 }}
                               >
                                 <span className="text-muted-foreground">{engWord}</span>
                               </motion.span>
-                              <motion.span
-                                className="whitespace-nowrap"
-                                animate={{
-                                  opacity: showRussian ? 1 : 0,
-                                  y: showRussian ? 0 : 5,
-                                  filter: showRussian ? 'blur(0px)' : 'blur(4px)'
-                                }}
-                                transition={{
-                                  duration: 0.4,
-                                  ease: [0.4, 0, 0.2, 1]
-                                }}
-                              >
-                                <span className="text-accent">{rusWord}</span>
-                              </motion.span>
-                            </motion.span>
+                              {showRussian && (
+                                <motion.span
+                                  className="inline-block"
+                                  initial={{ opacity: 0, filter: 'blur(4px)', scale: 0.9 }}
+                                  animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                                  transition={{
+                                    duration: 0.5,
+                                    ease: [0.4, 0, 0.2, 1]
+                                  }}
+                                >
+                                  <span className="text-accent">{rusWord}</span>
+                                </motion.span>
+                              )}
+                            </span>
                           )
                         })}
                       </p>
