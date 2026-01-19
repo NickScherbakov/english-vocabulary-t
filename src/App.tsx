@@ -19,6 +19,10 @@ interface DefinitionCache {
   [key: string]: string
 }
 
+interface RussianDefinitionCache {
+  [key: string]: string
+}
+
 interface LearnedWords {
   [key: string]: boolean
 }
@@ -28,6 +32,7 @@ function App() {
   const [currentIndex, setCurrentIndex] = useKV<number>('current-index', 0)
   const [translationCache, setTranslationCache] = useKV<TranslationCache>('translation-cache', {})
   const [definitionCache, setDefinitionCache] = useKV<DefinitionCache>('definition-cache', {})
+  const [russianDefinitionCache, setRussianDefinitionCache] = useKV<RussianDefinitionCache>('russian-definition-cache', {})
   const [learnedWords, setLearnedWords] = useKV<LearnedWords>('learned-words', {})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,13 +43,18 @@ function App() {
   const [showTranslation, setShowTranslation] = useState(false)
   const [currentTranslation, setCurrentTranslation] = useState<string>('')
   const [currentDefinition, setCurrentDefinition] = useState<string>('')
+  const [currentRussianDefinition, setCurrentRussianDefinition] = useState<string>('')
   const [isTranslating, setIsTranslating] = useState(false)
   const [isLoadingDefinition, setIsLoadingDefinition] = useState(false)
+  const [isLoadingRussianDefinition, setIsLoadingRussianDefinition] = useState(false)
   const [isAlternating, setIsAlternating] = useState(true)
   const [alternationInterval, setAlternationInterval] = useState(1500)
+  const [showRussianDefinition, setShowRussianDefinition] = useState(false)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
+  const definitionAlternationTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const definitionIntervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -156,6 +166,29 @@ function App() {
     }
   }, [definitionCache, setDefinitionCache])
 
+  const getRussianDefinition = useCallback(async (word: string): Promise<string> => {
+    const cache = russianDefinitionCache || {}
+    if (cache[word]) {
+      return cache[word]
+    }
+
+    try {
+      const promptText = `Provide a concise Russian definition for the English word "${word}". Return ONLY the Russian definition in 1-2 sentences. No additional text, no English.`
+      const russianDefinition = await window.spark.llm(promptText, 'gpt-4o-mini')
+      const cleanRussianDefinition = russianDefinition.trim()
+      
+      setRussianDefinitionCache((current = {}) => ({
+        ...current,
+        [word]: cleanRussianDefinition
+      }))
+      
+      return cleanRussianDefinition
+    } catch (err) {
+      console.error('Russian definition error:', err)
+      return 'Определение недоступно'
+    }
+  }, [russianDefinitionCache, setRussianDefinitionCache])
+
   useEffect(() => {
     const wordList = words || []
     const index = currentIndex || 0
@@ -163,8 +196,10 @@ function App() {
     
     if (word && !isLoading && !error) {
       setShowTranslation(false)
+      setShowRussianDefinition(false)
       setCurrentTranslation('')
       setCurrentDefinition('')
+      setCurrentRussianDefinition('')
       setIsAlternating(true)
       setAlternationInterval(1500)
       
@@ -173,6 +208,12 @@ function App() {
       }
       if (intervalDecreaseRef.current) {
         clearInterval(intervalDecreaseRef.current)
+      }
+      if (definitionAlternationTimerRef.current) {
+        clearTimeout(definitionAlternationTimerRef.current)
+      }
+      if (definitionIntervalDecreaseRef.current) {
+        clearInterval(definitionIntervalDecreaseRef.current)
       }
       
       const timer = setTimeout(() => {
@@ -192,20 +233,34 @@ function App() {
         setCurrentDefinition(definition)
         setIsLoadingDefinition(false)
       }, 1200)
+
+      const russianDefinitionTimer = setTimeout(async () => {
+        setIsLoadingRussianDefinition(true)
+        const russianDefinition = await getRussianDefinition(word)
+        setCurrentRussianDefinition(russianDefinition)
+        setIsLoadingRussianDefinition(false)
+      }, 1600)
       
       return () => {
         clearTimeout(timer)
         clearTimeout(translationTimer)
         clearTimeout(definitionTimer)
+        clearTimeout(russianDefinitionTimer)
         if (alternationTimerRef.current) {
           clearTimeout(alternationTimerRef.current)
         }
         if (intervalDecreaseRef.current) {
           clearInterval(intervalDecreaseRef.current)
         }
+        if (definitionAlternationTimerRef.current) {
+          clearTimeout(definitionAlternationTimerRef.current)
+        }
+        if (definitionIntervalDecreaseRef.current) {
+          clearInterval(definitionIntervalDecreaseRef.current)
+        }
       }
     }
-  }, [currentIndex, words, isLoading, error, speakWord, getTranslation, getDefinition])
+  }, [currentIndex, words, isLoading, error, speakWord, getTranslation, getDefinition, getRussianDefinition])
 
   useEffect(() => {
     if (!currentTranslation || !isAlternating) return
@@ -236,6 +291,37 @@ function App() {
     }
   }, [currentTranslation, isAlternating, alternationInterval])
 
+  useEffect(() => {
+    if (!currentRussianDefinition || !currentDefinition || !isAlternating) return
+
+    let currentInterval = 2000
+
+    const startDefinitionAlternation = () => {
+      definitionAlternationTimerRef.current = setTimeout(() => {
+        setShowRussianDefinition(prev => !prev)
+        startDefinitionAlternation()
+      }, currentInterval)
+    }
+
+    const initialDelay = setTimeout(() => {
+      startDefinitionAlternation()
+
+      definitionIntervalDecreaseRef.current = setInterval(() => {
+        currentInterval = Math.max(150, currentInterval * 0.85)
+      }, 2500)
+    }, 2000)
+
+    return () => {
+      clearTimeout(initialDelay)
+      if (definitionAlternationTimerRef.current) {
+        clearTimeout(definitionAlternationTimerRef.current)
+      }
+      if (definitionIntervalDecreaseRef.current) {
+        clearInterval(definitionIntervalDecreaseRef.current)
+      }
+    }
+  }, [currentRussianDefinition, currentDefinition, isAlternating])
+
   const stopAlternation = useCallback(() => {
     setIsAlternating(false)
     if (alternationTimerRef.current) {
@@ -243,6 +329,12 @@ function App() {
     }
     if (intervalDecreaseRef.current) {
       clearInterval(intervalDecreaseRef.current)
+    }
+    if (definitionAlternationTimerRef.current) {
+      clearTimeout(definitionAlternationTimerRef.current)
+    }
+    if (definitionIntervalDecreaseRef.current) {
+      clearInterval(definitionIntervalDecreaseRef.current)
     }
   }, [])
 
@@ -472,13 +564,44 @@ function App() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.6 }}
-                    className="max-w-2xl mx-auto px-4"
+                    className="max-w-2xl mx-auto px-4 min-h-[80px] flex items-center justify-center relative"
                   >
-                    {isLoadingDefinition ? (
+                    {isLoadingDefinition || isLoadingRussianDefinition ? (
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
                         <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
                         <span className="text-sm">Loading definition...</span>
                       </div>
+                    ) : currentDefinition && currentRussianDefinition ? (
+                      <>
+                        <motion.p 
+                          className="text-lg md:text-xl text-muted-foreground leading-relaxed italic absolute"
+                          animate={{
+                            opacity: showRussianDefinition ? 0 : 1,
+                            y: showRussianDefinition ? -10 : 0,
+                            filter: showRussianDefinition ? 'blur(8px)' : 'blur(0px)'
+                          }}
+                          transition={{
+                            duration: 0.7,
+                            ease: [0.4, 0, 0.2, 1]
+                          }}
+                        >
+                          "{currentDefinition}"
+                        </motion.p>
+                        <motion.p 
+                          className="text-lg md:text-xl text-accent leading-relaxed italic absolute"
+                          animate={{
+                            opacity: showRussianDefinition ? 1 : 0,
+                            y: showRussianDefinition ? 0 : 10,
+                            filter: showRussianDefinition ? 'blur(0px)' : 'blur(8px)'
+                          }}
+                          transition={{
+                            duration: 0.7,
+                            ease: [0.4, 0, 0.2, 1]
+                          }}
+                        >
+                          "{currentRussianDefinition}"
+                        </motion.p>
+                      </>
                     ) : currentDefinition ? (
                       <p className="text-lg md:text-xl text-muted-foreground leading-relaxed italic">
                         "{currentDefinition}"
