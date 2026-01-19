@@ -60,6 +60,8 @@ function App() {
   const [showColorControl, setShowColorControl] = useState(false)
   const [englishWordColor, setEnglishWordColor] = useKV<string>('english-word-color', 'oklch(0.98 0 0)')
   const [russianWordColor, setRussianWordColor] = useKV<string>('russian-word-color', 'oklch(0.70 0.20 350)')
+  const [englishDefinitionColor, setEnglishDefinitionColor] = useKV<string>('english-definition-color', 'oklch(0.65 0.05 280)')
+  const [russianDefinitionColor, setRussianDefinitionColor] = useKV<string>('russian-definition-color', 'oklch(0.70 0.20 350)')
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
@@ -813,12 +815,12 @@ function App() {
                         </motion.div>
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-96 bg-card/95 backdrop-blur-xl border-border/50" align="center">
+                    <PopoverContent className="w-96 max-h-[80vh] overflow-y-auto bg-card/95 backdrop-blur-xl border-border/50" align="center">
                       <div className="space-y-6">
                         <div className="space-y-2">
                           <h4 className="font-heading font-semibold text-lg">Настройка цветов</h4>
                           <p className="text-sm text-muted-foreground">
-                            Выберите цвета для английских и русских слов
+                            Выберите цвета для слов и толкований
                           </p>
                         </div>
 
@@ -894,6 +896,80 @@ function App() {
                               ))}
                             </div>
                           </div>
+
+                          <div className="border-t border-border/50 pt-4 space-y-4">
+                            <div className="space-y-3">
+                              <label className="text-sm font-medium">Цвет английского толкования</label>
+                              <div className="grid grid-cols-4 gap-2">
+                                {[
+                                  { name: 'Серый', color: 'oklch(0.65 0.05 280)' },
+                                  { name: 'Белый', color: 'oklch(0.98 0 0)' },
+                                  { name: 'Голубой', color: 'oklch(0.75 0.15 195)' },
+                                  { name: 'Фиолетовый', color: 'oklch(0.60 0.20 285)' },
+                                  { name: 'Зелёный', color: 'oklch(0.70 0.18 145)' },
+                                  { name: 'Жёлтый', color: 'oklch(0.85 0.18 95)' },
+                                  { name: 'Оранжевый', color: 'oklch(0.75 0.18 50)' },
+                                  { name: 'Серебро', color: 'oklch(0.80 0.02 270)' },
+                                ].map((preset) => (
+                                  <button
+                                    key={preset.name}
+                                    onClick={() => {
+                                      setEnglishDefinitionColor(preset.color)
+                                      toast.success(`Толкование EN: ${preset.name}`)
+                                    }}
+                                    className="group relative h-12 rounded-lg border-2 transition-all hover:scale-110 active:scale-95"
+                                    style={{ 
+                                      backgroundColor: preset.color,
+                                      borderColor: englishDefinitionColor === preset.color ? 'oklch(0.75 0.15 195)' : 'oklch(0.30 0.08 280)'
+                                    }}
+                                    title={preset.name}
+                                  >
+                                    {englishDefinitionColor === preset.color && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <Check weight="bold" className="text-background" />
+                                      </div>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <label className="text-sm font-medium">Цвет русского толкования</label>
+                              <div className="grid grid-cols-4 gap-2">
+                                {[
+                                  { name: 'Розовый', color: 'oklch(0.70 0.20 350)' },
+                                  { name: 'Красный', color: 'oklch(0.65 0.25 25)' },
+                                  { name: 'Голубой', color: 'oklch(0.75 0.15 195)' },
+                                  { name: 'Бирюзовый', color: 'oklch(0.70 0.15 195)' },
+                                  { name: 'Зелёный', color: 'oklch(0.70 0.18 145)' },
+                                  { name: 'Лимонный', color: 'oklch(0.85 0.18 105)' },
+                                  { name: 'Янтарный', color: 'oklch(0.70 0.18 65)' },
+                                  { name: 'Пурпурный', color: 'oklch(0.65 0.22 320)' },
+                                ].map((preset) => (
+                                  <button
+                                    key={preset.name}
+                                    onClick={() => {
+                                      setRussianDefinitionColor(preset.color)
+                                      toast.success(`Толкование RU: ${preset.name}`)
+                                    }}
+                                    className="group relative h-12 rounded-lg border-2 transition-all hover:scale-110 active:scale-95"
+                                    style={{ 
+                                      backgroundColor: preset.color,
+                                      borderColor: russianDefinitionColor === preset.color ? 'oklch(0.75 0.15 195)' : 'oklch(0.30 0.08 280)'
+                                    }}
+                                    title={preset.name}
+                                  >
+                                    {russianDefinitionColor === preset.color && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <Check weight="bold" className="text-background" />
+                                      </div>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
                         <div className="flex gap-2">
@@ -901,6 +977,8 @@ function App() {
                             onClick={() => {
                               setEnglishWordColor('oklch(0.98 0 0)')
                               setRussianWordColor('oklch(0.70 0.20 350)')
+                              setEnglishDefinitionColor('oklch(0.65 0.05 280)')
+                              setRussianDefinitionColor('oklch(0.70 0.20 350)')
                               toast.success('Цвета сброшены')
                             }}
                             variant="outline"
@@ -937,6 +1015,7 @@ function App() {
                         <div className="relative min-h-[60px] flex items-center justify-center">
                           <motion.p 
                             className="text-lg md:text-xl leading-relaxed text-center absolute inset-0 flex items-center justify-center px-4"
+                            style={{ color: englishDefinitionColor }}
                             animate={{
                               opacity: definitionWordStates.some(Boolean) ? 0 : 1,
                               y: definitionWordStates.some(Boolean) ? -10 : 0,
@@ -947,11 +1026,12 @@ function App() {
                               ease: [0.4, 0, 0.2, 1]
                             }}
                           >
-                            <span className="text-muted-foreground/90 italic">{currentDefinition}</span>
+                            <span className="italic">{currentDefinition}</span>
                           </motion.p>
                           
                           <motion.p 
                             className="text-lg md:text-xl leading-relaxed text-center absolute inset-0 flex items-center justify-center px-4"
+                            style={{ color: russianDefinitionColor }}
                             animate={{
                               opacity: definitionWordStates.some(Boolean) ? 1 : 0,
                               y: definitionWordStates.some(Boolean) ? 0 : 10,
@@ -962,7 +1042,7 @@ function App() {
                               ease: [0.4, 0, 0.2, 1]
                             }}
                           >
-                            <span className="text-accent font-medium italic">{currentRussianDefinition}</span>
+                            <span className="font-medium italic">{currentRussianDefinition}</span>
                           </motion.p>
                         </div>
                         
