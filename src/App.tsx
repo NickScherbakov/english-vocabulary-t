@@ -11,14 +11,22 @@ import { toast } from 'sonner'
 
 const WORD_LIST_URL = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt'
 
+interface TranslationCache {
+  [key: string]: string
+}
+
 function App() {
   const [words, setWords] = useKV<string[]>('english-words', [])
   const [currentIndex, setCurrentIndex] = useKV<number>('current-index', 0)
+  const [translationCache, setTranslationCache] = useKV<TranslationCache>('translation-cache', {})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showCompletion, setShowCompletion] = useState(false)
   const [direction, setDirection] = useState(0)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [showTranslation, setShowTranslation] = useState(false)
+  const [currentTranslation, setCurrentTranslation] = useState<string>('')
+  const [isTranslating, setIsTranslating] = useState(false)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
 
   useEffect(() => {
@@ -85,21 +93,63 @@ function App() {
     fetchWords()
   }, [words, setWords])
 
+  const getTranslation = useCallback(async (word: string): Promise<string> => {
+    const cache = translationCache || {}
+    if (cache[word]) {
+      return cache[word]
+    }
+
+    try {
+      const promptText = `Translate the English word "${word}" to Russian. Return ONLY the Russian translation word(s), nothing else. No explanations, no additional text.`
+      const translation = await window.spark.llm(promptText, 'gpt-4o-mini')
+      const cleanTranslation = translation.trim()
+      
+      setTranslationCache((current = {}) => ({
+        ...current,
+        [word]: cleanTranslation
+      }))
+      
+      return cleanTranslation
+    } catch (err) {
+      console.error('Translation error:', err)
+      return 'ошибка перевода'
+    }
+  }, [translationCache, setTranslationCache])
+
   useEffect(() => {
     const wordList = words || []
     const index = currentIndex || 0
     const word = wordList[index]
     
     if (word && !isLoading && !error) {
+      setShowTranslation(false)
+      setCurrentTranslation('')
+      
       const timer = setTimeout(() => {
         speakWord(word)
       }, 400)
-      return () => clearTimeout(timer)
+      
+      const translationTimer = setTimeout(async () => {
+        setIsTranslating(true)
+        const translation = await getTranslation(word)
+        setCurrentTranslation(translation)
+        setIsTranslating(false)
+        
+        setTimeout(() => {
+          setShowTranslation(true)
+        }, 1500)
+      }, 800)
+      
+      return () => {
+        clearTimeout(timer)
+        clearTimeout(translationTimer)
+      }
     }
-  }, [currentIndex, words, isLoading, error, speakWord])
+  }, [currentIndex, words, isLoading, error, speakWord, getTranslation])
 
   const goToNext = useCallback(() => {
     const wordList = words || []
+    setShowTranslation(false)
     setCurrentIndex((current = 0) => {
       const next = current + 1
       if (next >= wordList.length) {
@@ -112,6 +162,7 @@ function App() {
   }, [words, setCurrentIndex])
 
   const goToPrevious = useCallback(() => {
+    setShowTranslation(false)
     setCurrentIndex((current = 0) => {
       const prev = Math.max(0, current - 1)
       setDirection(-1)
@@ -120,6 +171,7 @@ function App() {
   }, [setCurrentIndex])
 
   const restart = useCallback(() => {
+    setShowTranslation(false)
     setCurrentIndex(0)
     setShowCompletion(false)
     setDirection(-1)
@@ -229,9 +281,38 @@ function App() {
                   }}
                   className="text-center space-y-6"
                 >
-                  <h1 className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-foreground">
-                    {currentWord}
-                  </h1>
+                  <div className="relative min-h-[200px] flex items-center justify-center">
+                    <motion.h1 
+                      className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight absolute"
+                      animate={{
+                        opacity: showTranslation ? 0 : 1,
+                        y: showTranslation ? -20 : 0,
+                        filter: showTranslation ? 'blur(10px)' : 'blur(0px)'
+                      }}
+                      transition={{
+                        duration: 0.8,
+                        ease: [0.4, 0, 0.2, 1]
+                      }}
+                    >
+                      {currentWord}
+                    </motion.h1>
+                    
+                    <motion.h1 
+                      className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-accent absolute"
+                      animate={{
+                        opacity: showTranslation ? 1 : 0,
+                        y: showTranslation ? 0 : 20,
+                        filter: showTranslation ? 'blur(0px)' : 'blur(10px)'
+                      }}
+                      transition={{
+                        duration: 0.8,
+                        ease: [0.4, 0, 0.2, 1]
+                      }}
+                    >
+                      {currentTranslation}
+                    </motion.h1>
+                  </div>
+                  
                   <Button
                     onClick={() => speakWord(currentWord)}
                     variant="ghost"
