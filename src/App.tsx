@@ -51,6 +51,7 @@ function App() {
   const [isPaused, setIsPaused] = useState(false)
   const [alternationInterval, setAlternationInterval] = useState(1500)
   const [showRussianDefinition, setShowRussianDefinition] = useState(false)
+  const [definitionWordStates, setDefinitionWordStates] = useState<boolean[]>([])
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
@@ -198,6 +199,7 @@ function App() {
     if (word && !isLoading && !error) {
       setShowTranslation(false)
       setShowRussianDefinition(false)
+      setDefinitionWordStates([])
       setCurrentTranslation('')
       setCurrentDefinition('')
       setCurrentRussianDefinition('')
@@ -296,11 +298,28 @@ function App() {
   useEffect(() => {
     if (!currentRussianDefinition || !currentDefinition || !isAlternating || isPaused) return
 
+    const englishWords = currentDefinition.split(' ')
+    const russianWords = currentRussianDefinition.split(' ')
+    const maxWords = Math.max(englishWords.length, russianWords.length)
+    
+    setDefinitionWordStates(new Array(maxWords).fill(false))
+
     let currentInterval = 2000
+    let currentWordIndex = 0
 
     const startDefinitionAlternation = () => {
+      if (currentWordIndex >= maxWords) {
+        currentWordIndex = 0
+        setDefinitionWordStates(new Array(maxWords).fill(false))
+      }
+
       definitionAlternationTimerRef.current = setTimeout(() => {
-        setShowRussianDefinition(prev => !prev)
+        setDefinitionWordStates(prev => {
+          const newStates = [...prev]
+          newStates[currentWordIndex] = !newStates[currentWordIndex]
+          return newStates
+        })
+        currentWordIndex++
         startDefinitionAlternation()
       }, currentInterval)
     }
@@ -612,7 +631,7 @@ function App() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.6 }}
-                    className="max-w-2xl mx-auto px-4 min-h-[80px] flex items-center justify-center relative"
+                    className="max-w-2xl mx-auto px-4 min-h-[80px] flex items-center justify-center"
                   >
                     {isLoadingDefinition || isLoadingRussianDefinition ? (
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -620,36 +639,50 @@ function App() {
                         <span className="text-sm">Loading definition...</span>
                       </div>
                     ) : currentDefinition && currentRussianDefinition ? (
-                      <>
-                        <motion.p 
-                          className="text-lg md:text-xl text-muted-foreground leading-relaxed italic absolute"
-                          animate={{
-                            opacity: showRussianDefinition ? 0 : 1,
-                            y: showRussianDefinition ? -10 : 0,
-                            filter: showRussianDefinition ? 'blur(8px)' : 'blur(0px)'
-                          }}
-                          transition={{
-                            duration: 0.7,
-                            ease: [0.4, 0, 0.2, 1]
-                          }}
-                        >
-                          "{currentDefinition}"
-                        </motion.p>
-                        <motion.p 
-                          className="text-lg md:text-xl text-accent leading-relaxed italic absolute"
-                          animate={{
-                            opacity: showRussianDefinition ? 1 : 0,
-                            y: showRussianDefinition ? 0 : 10,
-                            filter: showRussianDefinition ? 'blur(0px)' : 'blur(8px)'
-                          }}
-                          transition={{
-                            duration: 0.7,
-                            ease: [0.4, 0, 0.2, 1]
-                          }}
-                        >
-                          "{currentRussianDefinition}"
-                        </motion.p>
-                      </>
+                      <p className="text-lg md:text-xl leading-relaxed italic text-center">
+                        {currentDefinition.split(' ').map((engWord, index) => {
+                          const russianWords = currentRussianDefinition.split(' ')
+                          const rusWord = russianWords[index] || ''
+                          const showRussian = definitionWordStates[index] || false
+                          
+                          return (
+                            <motion.span
+                              key={index}
+                              className="inline-block relative mx-1"
+                              style={{ minWidth: '1ch' }}
+                            >
+                              <motion.span
+                                className="absolute inset-0 whitespace-nowrap"
+                                animate={{
+                                  opacity: showRussian ? 0 : 1,
+                                  y: showRussian ? -5 : 0,
+                                  filter: showRussian ? 'blur(4px)' : 'blur(0px)'
+                                }}
+                                transition={{
+                                  duration: 0.4,
+                                  ease: [0.4, 0, 0.2, 1]
+                                }}
+                              >
+                                <span className="text-muted-foreground">{engWord}</span>
+                              </motion.span>
+                              <motion.span
+                                className="whitespace-nowrap"
+                                animate={{
+                                  opacity: showRussian ? 1 : 0,
+                                  y: showRussian ? 0 : 5,
+                                  filter: showRussian ? 'blur(0px)' : 'blur(4px)'
+                                }}
+                                transition={{
+                                  duration: 0.4,
+                                  ease: [0.4, 0, 0.2, 1]
+                                }}
+                              >
+                                <span className="text-accent">{rusWord}</span>
+                              </motion.span>
+                            </motion.span>
+                          )
+                        })}
+                      </p>
                     ) : currentDefinition ? (
                       <p className="text-lg md:text-xl text-muted-foreground leading-relaxed italic">
                         "{currentDefinition}"
