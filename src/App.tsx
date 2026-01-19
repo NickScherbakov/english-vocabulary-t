@@ -631,7 +631,7 @@ function App() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.6 }}
-                    className="max-w-2xl mx-auto px-4 min-h-[80px] flex items-center justify-center"
+                    className="max-w-3xl mx-auto px-4 min-h-[120px] flex items-center justify-center"
                   >
                     {isLoadingDefinition || isLoadingRussianDefinition ? (
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -639,45 +639,58 @@ function App() {
                         <span className="text-sm">Loading definition...</span>
                       </div>
                     ) : currentDefinition && currentRussianDefinition ? (
-                      <p className="text-lg md:text-xl leading-relaxed italic text-center">
-                        {currentDefinition.split(' ').map((engWord, index) => {
-                          const russianWords = currentRussianDefinition.split(' ')
-                          const rusWord = russianWords[index] || ''
-                          const showRussian = definitionWordStates[index] || false
+                      <div className="space-y-3 w-full">
+                        <div className="relative min-h-[60px] flex items-center justify-center">
+                          <motion.p 
+                            className="text-lg md:text-xl leading-relaxed text-center absolute inset-0 flex items-center justify-center px-4"
+                            animate={{
+                              opacity: definitionWordStates.some(Boolean) ? 0 : 1,
+                              y: definitionWordStates.some(Boolean) ? -10 : 0,
+                              filter: definitionWordStates.some(Boolean) ? 'blur(8px)' : 'blur(0px)'
+                            }}
+                            transition={{
+                              duration: 0.6,
+                              ease: [0.4, 0, 0.2, 1]
+                            }}
+                          >
+                            <span className="text-muted-foreground/90 italic">{currentDefinition}</span>
+                          </motion.p>
                           
-                          return (
-                            <span key={index} className="inline-block mx-1">
-                              <motion.span
-                                className="inline-block"
-                                animate={{
-                                  opacity: showRussian ? 0 : 1,
-                                  filter: showRussian ? 'blur(4px)' : 'blur(0px)',
-                                  scale: showRussian ? 0.9 : 1
-                                }}
-                                transition={{
-                                  duration: 0.5,
-                                  ease: [0.4, 0, 0.2, 1]
-                                }}
-                              >
-                                <span className="text-muted-foreground">{engWord}</span>
-                              </motion.span>
-                              {showRussian && (
-                                <motion.span
-                                  className="inline-block"
-                                  initial={{ opacity: 0, filter: 'blur(4px)', scale: 0.9 }}
-                                  animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-                                  transition={{
-                                    duration: 0.5,
-                                    ease: [0.4, 0, 0.2, 1]
-                                  }}
-                                >
-                                  <span className="text-accent">{rusWord}</span>
-                                </motion.span>
-                              )}
-                            </span>
-                          )
-                        })}
-                      </p>
+                          <motion.p 
+                            className="text-lg md:text-xl leading-relaxed text-center absolute inset-0 flex items-center justify-center px-4"
+                            animate={{
+                              opacity: definitionWordStates.some(Boolean) ? 1 : 0,
+                              y: definitionWordStates.some(Boolean) ? 0 : 10,
+                              filter: definitionWordStates.some(Boolean) ? 'blur(0px)' : 'blur(8px)'
+                            }}
+                            transition={{
+                              duration: 0.6,
+                              ease: [0.4, 0, 0.2, 1]
+                            }}
+                          >
+                            <span className="text-accent font-medium italic">{currentRussianDefinition}</span>
+                          </motion.p>
+                        </div>
+                        
+                        <div className="flex justify-center gap-1 flex-wrap">
+                          {currentDefinition.split(' ').map((_, index) => (
+                            <motion.div
+                              key={index}
+                              className="h-1 rounded-full"
+                              style={{ width: '12px' }}
+                              animate={{
+                                backgroundColor: definitionWordStates[index] 
+                                  ? 'oklch(0.70 0.20 350)' 
+                                  : 'oklch(0.30 0.08 280)'
+                              }}
+                              transition={{
+                                duration: 0.3,
+                                ease: [0.4, 0, 0.2, 1]
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     ) : currentDefinition ? (
                       <p className="text-lg md:text-xl text-muted-foreground leading-relaxed italic">
                         "{currentDefinition}"
