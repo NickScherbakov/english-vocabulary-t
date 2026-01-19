@@ -309,20 +309,32 @@ function App() {
     const defTransformsPerMin = definitionTransformationsPerMinute || 30
     const totalCycleTimeMs = (60 * 1000) / defTransformsPerMin
     const timePerLanguageMs = totalCycleTimeMs / 2
-    const wordIntervalMs = timePerLanguageMs / maxWords
+    const wordsPerTransition = maxWords
+    const wordIntervalMs = timePerLanguageMs / wordsPerTransition
 
     let currentWordIndex = 0
+    let isShowingRussian = false
 
     const startDefinitionAlternation = () => {
-      if (currentWordIndex >= maxWords) {
+      if (currentWordIndex >= wordsPerTransition) {
         currentWordIndex = 0
-        setDefinitionWordStates(new Array(maxWords).fill(false))
+        isShowingRussian = !isShowingRussian
+        
+        if (isShowingRussian) {
+          setDefinitionWordStates(new Array(maxWords).fill(false))
+        } else {
+          setDefinitionWordStates(new Array(maxWords).fill(true))
+        }
       }
 
       definitionAlternationTimerRef.current = setTimeout(() => {
         setDefinitionWordStates(prev => {
           const newStates = [...prev]
-          newStates[currentWordIndex] = true
+          if (isShowingRussian) {
+            newStates[currentWordIndex] = true
+          } else {
+            newStates[currentWordIndex] = false
+          }
           return newStates
         })
         currentWordIndex++
