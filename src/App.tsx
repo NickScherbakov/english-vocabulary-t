@@ -51,10 +51,9 @@ function App() {
   const [isLoadingRussianDefinition, setIsLoadingRussianDefinition] = useState(false)
   const [isAlternating, setIsAlternating] = useState(true)
   const [isPaused, setIsPaused] = useState(false)
-  const [alternationInterval, setAlternationInterval] = useState(1500)
   const [showRussianDefinition, setShowRussianDefinition] = useState(false)
   const [definitionWordStates, setDefinitionWordStates] = useState<boolean[]>([])
-  const [speedMultiplier, setSpeedMultiplier] = useKV<number>('speed-multiplier', 1)
+  const [transformationsPerMinute, setTransformationsPerMinute] = useKV<number>('transformations-per-minute', 20)
   const [showSpeedControl, setShowSpeedControl] = useState(false)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -209,7 +208,6 @@ function App() {
       setCurrentRussianDefinition('')
       setIsAlternating(true)
       setIsPaused(false)
-      setAlternationInterval(1500)
       
       if (alternationTimerRef.current) {
         clearTimeout(alternationTimerRef.current)
@@ -273,32 +271,24 @@ function App() {
   useEffect(() => {
     if (!currentTranslation || !isAlternating || isPaused) return
 
-    const multiplier = speedMultiplier || 1
-    let currentInterval = alternationInterval / multiplier
+    const transformsPerMin = transformationsPerMinute || 20
+    const intervalMs = (60 * 1000) / transformsPerMin
 
     const startAlternation = () => {
       alternationTimerRef.current = setTimeout(() => {
         setShowTranslation(prev => !prev)
         startAlternation()
-      }, currentInterval)
+      }, intervalMs)
     }
 
     startAlternation()
-
-    intervalDecreaseRef.current = setInterval(() => {
-      currentInterval = Math.max(100 / multiplier, currentInterval * 0.85)
-      setAlternationInterval(currentInterval * multiplier)
-    }, 2000 / multiplier)
 
     return () => {
       if (alternationTimerRef.current) {
         clearTimeout(alternationTimerRef.current)
       }
-      if (intervalDecreaseRef.current) {
-        clearInterval(intervalDecreaseRef.current)
-      }
     }
-  }, [currentTranslation, isAlternating, isPaused, alternationInterval, speedMultiplier])
+  }, [currentTranslation, isAlternating, isPaused, transformationsPerMinute])
 
   useEffect(() => {
     if (!currentRussianDefinition || !currentDefinition || !isAlternating || isPaused) return
@@ -309,8 +299,10 @@ function App() {
     
     setDefinitionWordStates(new Array(maxWords).fill(false))
 
-    const multiplier = speedMultiplier || 1
-    let currentInterval = 2000 / multiplier
+    const transformsPerMin = transformationsPerMinute || 20
+    const baseIntervalMs = (60 * 1000) / transformsPerMin
+    const wordIntervalMs = baseIntervalMs / 3
+
     let currentWordIndex = 0
 
     const startDefinitionAlternation = () => {
@@ -327,27 +319,20 @@ function App() {
         })
         currentWordIndex++
         startDefinitionAlternation()
-      }, currentInterval)
+      }, wordIntervalMs)
     }
 
     const initialDelay = setTimeout(() => {
       startDefinitionAlternation()
-
-      definitionIntervalDecreaseRef.current = setInterval(() => {
-        currentInterval = Math.max(150 / multiplier, currentInterval * 0.85)
-      }, 2500 / multiplier)
-    }, 2000 / multiplier)
+    }, baseIntervalMs)
 
     return () => {
       clearTimeout(initialDelay)
       if (definitionAlternationTimerRef.current) {
         clearTimeout(definitionAlternationTimerRef.current)
       }
-      if (definitionIntervalDecreaseRef.current) {
-        clearInterval(definitionIntervalDecreaseRef.current)
-      }
     }
-  }, [currentRussianDefinition, currentDefinition, isAlternating, isPaused, speedMultiplier])
+  }, [currentRussianDefinition, currentDefinition, isAlternating, isPaused, transformationsPerMinute])
 
   const stopAlternation = useCallback(() => {
     setIsAlternating(false)
@@ -649,12 +634,12 @@ function App() {
                         >
                           <Gauge weight="fill" className="text-3xl" />
                         </motion.div>
-                        {speedMultiplier !== 1 && (
+                        {transformationsPerMinute !== 20 && (
                           <Badge 
                             variant="secondary" 
                             className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-secondary text-secondary-foreground"
                           >
-                            {speedMultiplier}x
+                            {transformationsPerMinute}/м
                           </Badge>
                         )}
                       </Button>
@@ -665,39 +650,39 @@ function App() {
                           <div className="flex items-center justify-between">
                             <h4 className="font-heading font-semibold text-lg">Скорость</h4>
                             <Badge variant="outline" className="font-mono">
-                              {speedMultiplier}x
+                              {transformationsPerMinute}/мин
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Регулируйте скорость трансформации слов
+                            Частота трансформации слов в минуту
                           </p>
                         </div>
                         <div className="space-y-3">
                           <Slider
-                            value={[speedMultiplier || 1]}
+                            value={[transformationsPerMinute || 20]}
                             onValueChange={(value) => {
                               const newSpeed = value[0]
-                              setSpeedMultiplier(newSpeed)
-                              toast.success(`Скорость: ${newSpeed}x`)
+                              setTransformationsPerMinute(newSpeed)
+                              toast.success(`Скорость: ${newSpeed} трансформаций/мин`)
                             }}
-                            min={0.5}
-                            max={5}
-                            step={0.5}
+                            min={5}
+                            max={120}
+                            step={5}
                             className="w-full"
                           />
                           <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>0.5x</span>
-                            <span>1x</span>
-                            <span>2x</span>
-                            <span>3x</span>
-                            <span>5x</span>
+                            <span>5/мин</span>
+                            <span>30/мин</span>
+                            <span>60/мин</span>
+                            <span>90/мин</span>
+                            <span>120/мин</span>
                           </div>
                         </div>
                         <div className="flex gap-2">
                           <Button
                             onClick={() => {
-                              setSpeedMultiplier(1)
-                              toast.success('Скорость сброшена')
+                              setTransformationsPerMinute(20)
+                              toast.success('Скорость сброшена: 20/мин')
                             }}
                             variant="outline"
                             size="sm"
