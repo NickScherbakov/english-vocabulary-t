@@ -307,7 +307,9 @@ function App() {
     setDefinitionWordStates(new Array(maxWords).fill(false))
 
     const defTransformsPerMin = definitionTransformationsPerMinute || 30
-    const wordIntervalMs = (60 * 1000) / defTransformsPerMin
+    const totalCycleTimeMs = (60 * 1000) / defTransformsPerMin
+    const timePerLanguageMs = totalCycleTimeMs / 2
+    const wordIntervalMs = timePerLanguageMs / maxWords
 
     let currentWordIndex = 0
 
