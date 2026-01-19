@@ -1059,25 +1059,6 @@ function App() {
                             <span className="font-medium italic">{currentRussianDefinition}</span>
                           </motion.p>
                         </div>
-                        
-                        <div className="flex justify-center gap-1 flex-wrap">
-                          {currentDefinition.split(' ').map((_, index) => (
-                            <motion.div
-                              key={index}
-                              className="h-1 rounded-full"
-                              style={{ width: '12px' }}
-                              animate={{
-                                backgroundColor: definitionWordStates[index] 
-                                  ? 'oklch(0.70 0.20 350)' 
-                                  : 'oklch(0.30 0.08 280)'
-                              }}
-                              transition={{
-                                duration: 0.3,
-                                ease: [0.4, 0, 0.2, 1]
-                              }}
-                            />
-                          ))}
-                        </div>
                       </div>
                     ) : currentDefinition ? (
                       <p className="text-lg md:text-xl text-muted-foreground leading-relaxed italic">
