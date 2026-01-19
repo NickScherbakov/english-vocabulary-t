@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -48,6 +48,7 @@ function App() {
   const [isLoadingDefinition, setIsLoadingDefinition] = useState(false)
   const [isLoadingRussianDefinition, setIsLoadingRussianDefinition] = useState(false)
   const [isAlternating, setIsAlternating] = useState(true)
+  const [isPaused, setIsPaused] = useState(false)
   const [alternationInterval, setAlternationInterval] = useState(1500)
   const [showRussianDefinition, setShowRussianDefinition] = useState(false)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
@@ -201,6 +202,7 @@ function App() {
       setCurrentDefinition('')
       setCurrentRussianDefinition('')
       setIsAlternating(true)
+      setIsPaused(false)
       setAlternationInterval(1500)
       
       if (alternationTimerRef.current) {
@@ -263,7 +265,7 @@ function App() {
   }, [currentIndex, words, isLoading, error, speakWord, getTranslation, getDefinition, getRussianDefinition])
 
   useEffect(() => {
-    if (!currentTranslation || !isAlternating) return
+    if (!currentTranslation || !isAlternating || isPaused) return
 
     let currentInterval = alternationInterval
 
@@ -289,10 +291,10 @@ function App() {
         clearInterval(intervalDecreaseRef.current)
       }
     }
-  }, [currentTranslation, isAlternating, alternationInterval])
+  }, [currentTranslation, isAlternating, isPaused, alternationInterval])
 
   useEffect(() => {
-    if (!currentRussianDefinition || !currentDefinition || !isAlternating) return
+    if (!currentRussianDefinition || !currentDefinition || !isAlternating || isPaused) return
 
     let currentInterval = 2000
 
@@ -320,10 +322,11 @@ function App() {
         clearInterval(definitionIntervalDecreaseRef.current)
       }
     }
-  }, [currentRussianDefinition, currentDefinition, isAlternating])
+  }, [currentRussianDefinition, currentDefinition, isAlternating, isPaused])
 
   const stopAlternation = useCallback(() => {
     setIsAlternating(false)
+    setIsPaused(true)
     if (alternationTimerRef.current) {
       clearTimeout(alternationTimerRef.current)
     }
@@ -336,6 +339,30 @@ function App() {
     if (definitionIntervalDecreaseRef.current) {
       clearInterval(definitionIntervalDecreaseRef.current)
     }
+  }, [])
+
+  const togglePause = useCallback(() => {
+    setIsPaused(prev => {
+      const newPaused = !prev
+      if (newPaused) {
+        if (alternationTimerRef.current) {
+          clearTimeout(alternationTimerRef.current)
+        }
+        if (intervalDecreaseRef.current) {
+          clearInterval(intervalDecreaseRef.current)
+        }
+        if (definitionAlternationTimerRef.current) {
+          clearTimeout(definitionAlternationTimerRef.current)
+        }
+        if (definitionIntervalDecreaseRef.current) {
+          clearInterval(definitionIntervalDecreaseRef.current)
+        }
+        toast('Paused')
+      } else {
+        toast('Resumed')
+      }
+      return newPaused
+    })
   }, [])
 
   const goToNext = useCallback(() => {
@@ -411,12 +438,15 @@ function App() {
       } else if (e.key === 'n' || e.key === 'N') {
         e.preventDefault()
         markAsLearned(currentWord, false)
+      } else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault()
+        togglePause()
       }
     }
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [goToNext, goToPrevious, markAsLearned, currentWord])
+  }, [goToNext, goToPrevious, markAsLearned, currentWord, togglePause])
 
   if (isLoading) {
     return (
@@ -560,6 +590,24 @@ function App() {
                     </motion.div>
                   </Button>
 
+                  <Button
+                    onClick={togglePause}
+                    variant="ghost"
+                    size="lg"
+                    className="group text-accent hover:text-accent/80 transition-all hover:scale-110 active:scale-95 ml-4"
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {isPaused ? (
+                        <Play weight="fill" className="text-3xl" />
+                      ) : (
+                        <Pause weight="fill" className="text-3xl" />
+                      )}
+                    </motion.div>
+                  </Button>
+
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -664,7 +712,8 @@ function App() {
           <p className="tracking-wide">
             Press <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> or <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> to navigate • 
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs mx-1">Y</kbd> = learned • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> = need review
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> = need review • 
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> = pause
           </p>
         </div>
       </div>
