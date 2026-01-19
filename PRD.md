@@ -27,11 +27,11 @@ This is a single-purpose vocabulary tool with state management for word progress
 - Success criteria: Navigation is instant (<100ms), supports keyboard/swipe/click
 
 **Progress Tracking**
-- Functionality: Display current position in the 3000-word collection
-- Purpose: Show learning momentum and remaining vocabulary
-- Trigger: Automatic update on word change
-- Progression: Word changes → Calculate position → Update progress indicator → Animate change
-- Success criteria: Shows "X of 3000" and visual progress bar
+- Functionality: Display current position and track learned vs. review words with statistics
+- Purpose: Show learning momentum, remaining vocabulary, and measure actual learning progress
+- Trigger: Automatic update on word change or marking words as learned/review
+- Progression: Word changes → Calculate position → Update progress indicator → Animate change → Track learned status
+- Success criteria: Shows "X of 3000", visual progress bar, and learning statistics accessible via Stats dialog
 
 **Word Collection Management**
 - Functionality: Fetch and cache the 3000 most common English words
@@ -47,14 +47,30 @@ This is a single-purpose vocabulary tool with state management for word progress
 - Progression: Word displayed → Brief delay → Speak word → Visual feedback during speech → Allow manual replay
 - Success criteria: Clear audio pronunciation, visual indication during playback, manual replay option available
 
+**Russian Translation Display**
+- Functionality: Display Russian translation with smooth fade transition after word pronunciation
+- Purpose: Help Russian-speaking learners understand word meanings
+- Trigger: Automatic after word is displayed and pronounced (1.5s delay after translation is fetched)
+- Progression: Word displayed → Fetch/retrieve translation from cache → Brief delay → Fade English word out → Fade Russian word in
+- Success criteria: Smooth transition animation, cached translations for performance, clear visual distinction between English and Russian
+
+**Learning Status Tracking**
+- Functionality: Mark words as "learned" or "needs review" with visual feedback and statistics
+- Purpose: Track vocabulary mastery and identify words requiring more practice
+- Trigger: User clicks check/X buttons or presses Y/N keys
+- Progression: User marks word → Update learned status → Show toast feedback → Auto-advance on learned → Update statistics
+- Success criteria: Persistent storage of learned words, visual indication of current word status, accessible statistics dashboard showing learned count, review count, and overall progress percentage
+
 ## Edge Case Handling
 
 - **Network Failure**: Display cached words if available, show helpful error message if no cache exists
-- **End of List**: Show completion celebration, allow restart from beginning
+- **End of List**: Show completion celebration with learning statistics, allow restart from beginning
 - **Rapid Navigation**: Debounce/throttle animations to prevent UI jank
 - **Invalid Word Data**: Filter out empty/malformed entries, fallback to curated list
 - **Browser Audio Support**: Gracefully handle browsers without Web Speech API support, show toast notification
 - **Audio Playback Errors**: Cancel previous speech before starting new, handle errors with user feedback
+- **Translation Failures**: Show fallback error message in Russian, cache successful translations to avoid repeated API calls
+- **Keyboard Navigation**: Support both Y/N keys for marking and arrow keys for navigation without conflicts
 
 ## Design Direction
 
@@ -96,26 +112,34 @@ Animations create a sense of tangible physicality - cards should feel like they 
   - Button for navigation controls with distinct hover/active states
   - Progress bar component with gradient fill
   - Badge for word counter display
-  - Dialog for completion celebration and error states
+  - Dialog for completion celebration, statistics dashboard, and error states
 - **Customizations**: 
   - Large-format card with mesh gradient background using multiple radial gradients
   - Custom progress bar with dual-color gradient fill and glow effect
   - Navigation buttons with icon-only design, glassmorphism effect
+  - Learning status buttons (Check/X) with color-coded states for learned/review
+  - Statistics dashboard showing three metrics in grid layout
 - **States**: 
   - Buttons: Subtle glow on hover, scale down on press, disabled state at list boundaries
   - Card: Smooth slide/fade transitions between words
   - Progress: Animated width change with spring easing
+  - Learning buttons: Visual indication when word is marked (highlighted border/background)
+  - Stats dialog: Animated entry with backdrop blur
 - **Icon Selection**: 
   - CaretLeft/CaretRight for navigation
   - ArrowCounterClockwise for restart
   - SpeakerHigh for audio pronunciation
-  - Check for completion
+  - Check for learned words
+  - X for words needing review
+  - ChartBar for statistics dashboard
 - **Spacing**: 
   - Generous padding (p-12) on main card
   - Large gaps (gap-8) between major sections
   - Tight grouping (gap-2) for related controls
+  - Grid layout (grid-cols-3) for statistics cards
 - **Mobile**: 
   - Stack navigation buttons below card on mobile
   - Reduce font sizes: word to 48px, progress to 16px
   - Add swipe gesture support for touch devices
   - Full-width card with reduced padding (p-6)
+  - Statistics grid adjusts to single column on small screens

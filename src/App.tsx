@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,13 +15,19 @@ interface TranslationCache {
   [key: string]: string
 }
 
+interface LearnedWords {
+  [key: string]: boolean
+}
+
 function App() {
   const [words, setWords] = useKV<string[]>('english-words', [])
   const [currentIndex, setCurrentIndex] = useKV<number>('current-index', 0)
   const [translationCache, setTranslationCache] = useKV<TranslationCache>('translation-cache', {})
+  const [learnedWords, setLearnedWords] = useKV<LearnedWords>('learned-words', {})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showCompletion, setShowCompletion] = useState(false)
+  const [showStats, setShowStats] = useState(false)
   const [direction, setDirection] = useState(0)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [showTranslation, setShowTranslation] = useState(false)
@@ -170,12 +176,37 @@ function App() {
     })
   }, [setCurrentIndex])
 
+  const markAsLearned = useCallback((word: string, learned: boolean) => {
+    setLearnedWords((current = {}) => ({
+      ...current,
+      [word]: learned
+    }))
+    
+    if (learned) {
+      toast.success('Word marked as learned! 🎉')
+      setTimeout(() => goToNext(), 600)
+    } else {
+      toast('Marked for review')
+    }
+  }, [setLearnedWords, goToNext])
+
   const restart = useCallback(() => {
     setShowTranslation(false)
     setCurrentIndex(0)
     setShowCompletion(false)
     setDirection(-1)
   }, [setCurrentIndex])
+
+  const wordList = words || []
+  const index = currentIndex || 0
+  const currentWord = wordList[index] || ''
+  const progress = wordList.length > 0 ? ((index + 1) / wordList.length) * 100 : 0
+  
+  const learned = learnedWords || {}
+  const learnedCount = Object.values(learned).filter(Boolean).length
+  const reviewCount = Object.values(learned).filter(v => v === false).length
+  const isCurrentWordLearned = learned[currentWord] === true
+  const isCurrentWordMarked = learned[currentWord] === false
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -185,17 +216,18 @@ function App() {
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
         goToPrevious()
+      } else if (e.key === 'y' || e.key === 'Y') {
+        e.preventDefault()
+        markAsLearned(currentWord, true)
+      } else if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault()
+        markAsLearned(currentWord, false)
       }
     }
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [goToNext, goToPrevious])
-
-  const wordList = words || []
-  const index = currentIndex || 0
-  const currentWord = wordList[index] || ''
-  const progress = wordList.length > 0 ? ((index + 1) / wordList.length) * 100 : 0
+  }, [goToNext, goToPrevious, markAsLearned, currentWord])
 
   if (isLoading) {
     return (
@@ -232,9 +264,20 @@ function App() {
     <div className="min-h-screen mesh-gradient flex flex-col items-center justify-center p-4 md:p-8">
       <div className="w-full max-w-4xl space-y-6">
         <div className="flex items-center justify-between">
-          <Badge variant="secondary" className="text-sm tracking-wider bg-card/80 backdrop-blur-sm border-border/50">
-            Word {index + 1} of {wordList.length}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="text-sm tracking-wider bg-card/80 backdrop-blur-sm border-border/50">
+              Word {index + 1} of {wordList.length}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowStats(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChartBar className="mr-2" weight="bold" />
+              Stats
+            </Button>
+          </div>
           <Button
             variant="ghost"
             size="sm"
@@ -343,6 +386,32 @@ function App() {
             </Button>
             
             <Button
+              onClick={() => markAsLearned(currentWord, false)}
+              size="lg"
+              variant={isCurrentWordMarked ? "default" : "outline"}
+              className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 ${
+                isCurrentWordMarked 
+                  ? 'bg-destructive/80 hover:bg-destructive border-destructive text-destructive-foreground' 
+                  : 'bg-card/80 hover:bg-card border-border/50 hover:border-destructive/50'
+              }`}
+            >
+              <X weight="bold" className="text-2xl" />
+            </Button>
+            
+            <Button
+              onClick={() => markAsLearned(currentWord, true)}
+              size="lg"
+              variant={isCurrentWordLearned ? "default" : "outline"}
+              className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 ${
+                isCurrentWordLearned 
+                  ? 'bg-secondary hover:bg-secondary/90 border-secondary text-secondary-foreground shadow-lg shadow-secondary/50' 
+                  : 'bg-card/80 hover:bg-card border-border/50 hover:border-secondary/50'
+              }`}
+            >
+              <Check weight="bold" className="text-2xl" />
+            </Button>
+            
+            <Button
               onClick={goToNext}
               disabled={index >= wordList.length - 1}
               size="lg"
@@ -354,16 +423,66 @@ function App() {
         </div>
 
         <div className="text-center text-sm text-muted-foreground">
-          <p className="tracking-wide">Press <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> or <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> to navigate</p>
+          <p className="tracking-wide">
+            Press <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> or <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> to navigate • 
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs mx-1">Y</kbd> = learned • 
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> = need review
+          </p>
         </div>
       </div>
+
+      <Dialog open={showStats} onOpenChange={setShowStats}>
+        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-heading">📊 Learning Progress</DialogTitle>
+            <DialogDescription className="text-lg pt-4">
+              Track your vocabulary journey
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-3 gap-4">
+              <Card className="p-6 bg-secondary/20 border-secondary/30">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-secondary">{learnedCount}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Learned</div>
+                </div>
+              </Card>
+              <Card className="p-6 bg-destructive/20 border-destructive/30">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-destructive">{reviewCount}</div>
+                  <div className="text-sm text-muted-foreground mt-1">To Review</div>
+                </div>
+              </Card>
+              <Card className="p-6 bg-primary/20 border-primary/30">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary">{wordList.length}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Total</div>
+                </div>
+              </Card>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Overall Progress</span>
+                <span className="font-medium">{Math.round((learnedCount / wordList.length) * 100)}%</span>
+              </div>
+              <Progress value={(learnedCount / wordList.length) * 100} className="h-3" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowStats(false)} className="bg-primary hover:bg-primary/90">
+              Continue Learning
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showCompletion} onOpenChange={setShowCompletion}>
         <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
           <DialogHeader>
             <DialogTitle className="text-3xl font-heading">🎉 Congratulations!</DialogTitle>
             <DialogDescription className="text-lg pt-4">
-              You've reviewed all {wordList.length} words. Amazing work!
+              You've reviewed all {wordList.length} words. You've learned {learnedCount} words so far!
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
