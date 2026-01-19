@@ -15,6 +15,10 @@ interface TranslationCache {
   [key: string]: string
 }
 
+interface DefinitionCache {
+  [key: string]: string
+}
+
 interface LearnedWords {
   [key: string]: boolean
 }
@@ -23,6 +27,7 @@ function App() {
   const [words, setWords] = useKV<string[]>('english-words', [])
   const [currentIndex, setCurrentIndex] = useKV<number>('current-index', 0)
   const [translationCache, setTranslationCache] = useKV<TranslationCache>('translation-cache', {})
+  const [definitionCache, setDefinitionCache] = useKV<DefinitionCache>('definition-cache', {})
   const [learnedWords, setLearnedWords] = useKV<LearnedWords>('learned-words', {})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -32,7 +37,9 @@ function App() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [showTranslation, setShowTranslation] = useState(false)
   const [currentTranslation, setCurrentTranslation] = useState<string>('')
+  const [currentDefinition, setCurrentDefinition] = useState<string>('')
   const [isTranslating, setIsTranslating] = useState(false)
+  const [isLoadingDefinition, setIsLoadingDefinition] = useState(false)
   const [isAlternating, setIsAlternating] = useState(true)
   const [alternationInterval, setAlternationInterval] = useState(1500)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
@@ -126,6 +133,29 @@ function App() {
     }
   }, [translationCache, setTranslationCache])
 
+  const getDefinition = useCallback(async (word: string): Promise<string> => {
+    const cache = definitionCache || {}
+    if (cache[word]) {
+      return cache[word]
+    }
+
+    try {
+      const promptText = `Provide a concise English definition for the word "${word}". Return ONLY the definition in 1-2 sentences, suitable for English learners. No additional text.`
+      const definition = await window.spark.llm(promptText, 'gpt-4o-mini')
+      const cleanDefinition = definition.trim()
+      
+      setDefinitionCache((current = {}) => ({
+        ...current,
+        [word]: cleanDefinition
+      }))
+      
+      return cleanDefinition
+    } catch (err) {
+      console.error('Definition error:', err)
+      return 'Definition unavailable'
+    }
+  }, [definitionCache, setDefinitionCache])
+
   useEffect(() => {
     const wordList = words || []
     const index = currentIndex || 0
@@ -134,6 +164,7 @@ function App() {
     if (word && !isLoading && !error) {
       setShowTranslation(false)
       setCurrentTranslation('')
+      setCurrentDefinition('')
       setIsAlternating(true)
       setAlternationInterval(1500)
       
@@ -154,10 +185,18 @@ function App() {
         setCurrentTranslation(translation)
         setIsTranslating(false)
       }, 800)
+
+      const definitionTimer = setTimeout(async () => {
+        setIsLoadingDefinition(true)
+        const definition = await getDefinition(word)
+        setCurrentDefinition(definition)
+        setIsLoadingDefinition(false)
+      }, 1200)
       
       return () => {
         clearTimeout(timer)
         clearTimeout(translationTimer)
+        clearTimeout(definitionTimer)
         if (alternationTimerRef.current) {
           clearTimeout(alternationTimerRef.current)
         }
@@ -166,7 +205,7 @@ function App() {
         }
       }
     }
-  }, [currentIndex, words, isLoading, error, speakWord, getTranslation])
+  }, [currentIndex, words, isLoading, error, speakWord, getTranslation, getDefinition])
 
   useEffect(() => {
     if (!currentTranslation || !isAlternating) return
@@ -380,7 +419,7 @@ function App() {
                     duration: 0.3,
                     ease: [0.4, 0, 0.2, 1]
                   }}
-                  className="text-center space-y-6"
+                  className="text-center space-y-8 w-full"
                 >
                   <div className="relative min-h-[200px] flex items-center justify-center">
                     <motion.h1 
@@ -428,6 +467,24 @@ function App() {
                       <SpeakerHigh weight="fill" className="text-3xl" />
                     </motion.div>
                   </Button>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5, duration: 0.6 }}
+                    className="max-w-2xl mx-auto px-4"
+                  >
+                    {isLoadingDefinition ? (
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                        <span className="text-sm">Loading definition...</span>
+                      </div>
+                    ) : currentDefinition ? (
+                      <p className="text-lg md:text-xl text-muted-foreground leading-relaxed italic">
+                        "{currentDefinition}"
+                      </p>
+                    ) : null}
+                  </motion.div>
                 </motion.div>
               </AnimatePresence>
             </div>
