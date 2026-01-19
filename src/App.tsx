@@ -33,7 +33,11 @@ function App() {
   const [showTranslation, setShowTranslation] = useState(false)
   const [currentTranslation, setCurrentTranslation] = useState<string>('')
   const [isTranslating, setIsTranslating] = useState(false)
+  const [isAlternating, setIsAlternating] = useState(true)
+  const [alternationInterval, setAlternationInterval] = useState(1500)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
+  const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -130,6 +134,15 @@ function App() {
     if (word && !isLoading && !error) {
       setShowTranslation(false)
       setCurrentTranslation('')
+      setIsAlternating(true)
+      setAlternationInterval(1500)
+      
+      if (alternationTimerRef.current) {
+        clearTimeout(alternationTimerRef.current)
+      }
+      if (intervalDecreaseRef.current) {
+        clearInterval(intervalDecreaseRef.current)
+      }
       
       const timer = setTimeout(() => {
         speakWord(word)
@@ -140,20 +153,62 @@ function App() {
         const translation = await getTranslation(word)
         setCurrentTranslation(translation)
         setIsTranslating(false)
-        
-        setTimeout(() => {
-          setShowTranslation(true)
-        }, 1500)
       }, 800)
       
       return () => {
         clearTimeout(timer)
         clearTimeout(translationTimer)
+        if (alternationTimerRef.current) {
+          clearTimeout(alternationTimerRef.current)
+        }
+        if (intervalDecreaseRef.current) {
+          clearInterval(intervalDecreaseRef.current)
+        }
       }
     }
   }, [currentIndex, words, isLoading, error, speakWord, getTranslation])
 
+  useEffect(() => {
+    if (!currentTranslation || !isAlternating) return
+
+    let currentInterval = alternationInterval
+
+    const startAlternation = () => {
+      alternationTimerRef.current = setTimeout(() => {
+        setShowTranslation(prev => !prev)
+        startAlternation()
+      }, currentInterval)
+    }
+
+    startAlternation()
+
+    intervalDecreaseRef.current = setInterval(() => {
+      currentInterval = Math.max(100, currentInterval * 0.85)
+      setAlternationInterval(currentInterval)
+    }, 2000)
+
+    return () => {
+      if (alternationTimerRef.current) {
+        clearTimeout(alternationTimerRef.current)
+      }
+      if (intervalDecreaseRef.current) {
+        clearInterval(intervalDecreaseRef.current)
+      }
+    }
+  }, [currentTranslation, isAlternating, alternationInterval])
+
+  const stopAlternation = useCallback(() => {
+    setIsAlternating(false)
+    if (alternationTimerRef.current) {
+      clearTimeout(alternationTimerRef.current)
+    }
+    if (intervalDecreaseRef.current) {
+      clearInterval(intervalDecreaseRef.current)
+    }
+  }, [])
+
   const goToNext = useCallback(() => {
+    stopAlternation()
     const wordList = words || []
     setShowTranslation(false)
     setCurrentIndex((current = 0) => {
@@ -165,18 +220,20 @@ function App() {
       setDirection(1)
       return next
     })
-  }, [words, setCurrentIndex])
+  }, [words, setCurrentIndex, stopAlternation])
 
   const goToPrevious = useCallback(() => {
+    stopAlternation()
     setShowTranslation(false)
     setCurrentIndex((current = 0) => {
       const prev = Math.max(0, current - 1)
       setDirection(-1)
       return prev
     })
-  }, [setCurrentIndex])
+  }, [setCurrentIndex, stopAlternation])
 
   const markAsLearned = useCallback((word: string, learned: boolean) => {
+    stopAlternation()
     setLearnedWords((current = {}) => ({
       ...current,
       [word]: learned
@@ -188,14 +245,15 @@ function App() {
     } else {
       toast('Marked for review')
     }
-  }, [setLearnedWords, goToNext])
+  }, [setLearnedWords, goToNext, stopAlternation])
 
   const restart = useCallback(() => {
+    stopAlternation()
     setShowTranslation(false)
     setCurrentIndex(0)
     setShowCompletion(false)
     setDirection(-1)
-  }, [setCurrentIndex])
+  }, [setCurrentIndex, stopAlternation])
 
   const wordList = words || []
   const index = currentIndex || 0
