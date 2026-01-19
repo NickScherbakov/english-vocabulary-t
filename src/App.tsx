@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Slider } from '@/components/ui/slider'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
 
 const WORD_LIST_URL = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt'
@@ -52,6 +54,8 @@ function App() {
   const [alternationInterval, setAlternationInterval] = useState(1500)
   const [showRussianDefinition, setShowRussianDefinition] = useState(false)
   const [definitionWordStates, setDefinitionWordStates] = useState<boolean[]>([])
+  const [speedMultiplier, setSpeedMultiplier] = useKV<number>('speed-multiplier', 1)
+  const [showSpeedControl, setShowSpeedControl] = useState(false)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
@@ -269,7 +273,8 @@ function App() {
   useEffect(() => {
     if (!currentTranslation || !isAlternating || isPaused) return
 
-    let currentInterval = alternationInterval
+    const multiplier = speedMultiplier || 1
+    let currentInterval = alternationInterval / multiplier
 
     const startAlternation = () => {
       alternationTimerRef.current = setTimeout(() => {
@@ -281,9 +286,9 @@ function App() {
     startAlternation()
 
     intervalDecreaseRef.current = setInterval(() => {
-      currentInterval = Math.max(100, currentInterval * 0.85)
-      setAlternationInterval(currentInterval)
-    }, 2000)
+      currentInterval = Math.max(100 / multiplier, currentInterval * 0.85)
+      setAlternationInterval(currentInterval * multiplier)
+    }, 2000 / multiplier)
 
     return () => {
       if (alternationTimerRef.current) {
@@ -293,7 +298,7 @@ function App() {
         clearInterval(intervalDecreaseRef.current)
       }
     }
-  }, [currentTranslation, isAlternating, isPaused, alternationInterval])
+  }, [currentTranslation, isAlternating, isPaused, alternationInterval, speedMultiplier])
 
   useEffect(() => {
     if (!currentRussianDefinition || !currentDefinition || !isAlternating || isPaused) return
@@ -304,7 +309,8 @@ function App() {
     
     setDefinitionWordStates(new Array(maxWords).fill(false))
 
-    let currentInterval = 2000
+    const multiplier = speedMultiplier || 1
+    let currentInterval = 2000 / multiplier
     let currentWordIndex = 0
 
     const startDefinitionAlternation = () => {
@@ -328,9 +334,9 @@ function App() {
       startDefinitionAlternation()
 
       definitionIntervalDecreaseRef.current = setInterval(() => {
-        currentInterval = Math.max(150, currentInterval * 0.85)
-      }, 2500)
-    }, 2000)
+        currentInterval = Math.max(150 / multiplier, currentInterval * 0.85)
+      }, 2500 / multiplier)
+    }, 2000 / multiplier)
 
     return () => {
       clearTimeout(initialDelay)
@@ -341,7 +347,7 @@ function App() {
         clearInterval(definitionIntervalDecreaseRef.current)
       }
     }
-  }, [currentRussianDefinition, currentDefinition, isAlternating, isPaused])
+  }, [currentRussianDefinition, currentDefinition, isAlternating, isPaused, speedMultiplier])
 
   const stopAlternation = useCallback(() => {
     setIsAlternating(false)
@@ -460,6 +466,9 @@ function App() {
       } else if (e.key === 'p' || e.key === 'P') {
         e.preventDefault()
         togglePause()
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault()
+        setShowSpeedControl(prev => !prev)
       }
     }
 
@@ -627,6 +636,87 @@ function App() {
                     </motion.div>
                   </Button>
 
+                  <Popover open={showSpeedControl} onOpenChange={setShowSpeedControl}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="lg"
+                        className="group text-primary hover:text-primary/80 transition-all hover:scale-110 active:scale-95 ml-4 relative"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Gauge weight="fill" className="text-3xl" />
+                        </motion.div>
+                        {speedMultiplier !== 1 && (
+                          <Badge 
+                            variant="secondary" 
+                            className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-secondary text-secondary-foreground"
+                          >
+                            {speedMultiplier}x
+                          </Badge>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-card/95 backdrop-blur-xl border-border/50" align="center">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-heading font-semibold text-lg">Скорость</h4>
+                            <Badge variant="outline" className="font-mono">
+                              {speedMultiplier}x
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Регулируйте скорость трансформации слов
+                          </p>
+                        </div>
+                        <div className="space-y-3">
+                          <Slider
+                            value={[speedMultiplier || 1]}
+                            onValueChange={(value) => {
+                              const newSpeed = value[0]
+                              setSpeedMultiplier(newSpeed)
+                              toast.success(`Скорость: ${newSpeed}x`)
+                            }}
+                            min={0.5}
+                            max={5}
+                            step={0.5}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>0.5x</span>
+                            <span>1x</span>
+                            <span>2x</span>
+                            <span>3x</span>
+                            <span>5x</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              setSpeedMultiplier(1)
+                              toast.success('Скорость сброшена')
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Сбросить
+                          </Button>
+                          <Button
+                            onClick={() => setShowSpeedControl(false)}
+                            size="sm"
+                            className="flex-1 bg-primary hover:bg-primary/90"
+                          >
+                            Готово
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -754,7 +844,8 @@ function App() {
             Press <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> or <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> to navigate • 
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs mx-1">Y</kbd> = learned • 
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> = need review • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> = pause
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> = pause • 
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> = speed
           </p>
         </div>
       </div>
