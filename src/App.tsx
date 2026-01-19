@@ -54,7 +54,9 @@ function App() {
   const [showRussianDefinition, setShowRussianDefinition] = useState(false)
   const [definitionWordStates, setDefinitionWordStates] = useState<boolean[]>([])
   const [transformationsPerMinute, setTransformationsPerMinute] = useKV<number>('transformations-per-minute', 20)
+  const [definitionTransformationsPerMinute, setDefinitionTransformationsPerMinute] = useKV<number>('definition-transformations-per-minute', 30)
   const [showSpeedControl, setShowSpeedControl] = useState(false)
+  const [showDefinitionSpeedControl, setShowDefinitionSpeedControl] = useState(false)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
@@ -299,9 +301,8 @@ function App() {
     
     setDefinitionWordStates(new Array(maxWords).fill(false))
 
-    const transformsPerMin = transformationsPerMinute || 20
-    const baseIntervalMs = (60 * 1000) / transformsPerMin
-    const wordIntervalMs = baseIntervalMs / 3
+    const defTransformsPerMin = definitionTransformationsPerMinute || 30
+    const wordIntervalMs = (60 * 1000) / defTransformsPerMin
 
     let currentWordIndex = 0
 
@@ -322,9 +323,12 @@ function App() {
       }, wordIntervalMs)
     }
 
+    const mainTransformsPerMin = transformationsPerMinute || 20
+    const initialDelayMs = (60 * 1000) / mainTransformsPerMin
+
     const initialDelay = setTimeout(() => {
       startDefinitionAlternation()
-    }, baseIntervalMs)
+    }, initialDelayMs)
 
     return () => {
       clearTimeout(initialDelay)
@@ -332,7 +336,7 @@ function App() {
         clearTimeout(definitionAlternationTimerRef.current)
       }
     }
-  }, [currentRussianDefinition, currentDefinition, isAlternating, isPaused, transformationsPerMinute])
+  }, [currentRussianDefinition, currentDefinition, isAlternating, isPaused, transformationsPerMinute, definitionTransformationsPerMinute])
 
   const stopAlternation = useCallback(() => {
     setIsAlternating(false)
@@ -454,6 +458,9 @@ function App() {
       } else if (e.key === 's' || e.key === 'S') {
         e.preventDefault()
         setShowSpeedControl(prev => !prev)
+      } else if (e.key === 'd' || e.key === 'D') {
+        e.preventDefault()
+        setShowDefinitionSpeedControl(prev => !prev)
       }
     }
 
@@ -648,13 +655,13 @@ function App() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <h4 className="font-heading font-semibold text-lg">Скорость</h4>
+                            <h4 className="font-heading font-semibold text-lg">Скорость слов</h4>
                             <Badge variant="outline" className="font-mono">
                               {transformationsPerMinute}/мин
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Частота трансформации слов в минуту
+                            Частота трансформации основной секции
                           </p>
                         </div>
                         <div className="space-y-3">
@@ -663,7 +670,7 @@ function App() {
                             onValueChange={(value) => {
                               const newSpeed = value[0]
                               setTransformationsPerMinute(newSpeed)
-                              toast.success(`Скорость: ${newSpeed} трансформаций/мин`)
+                              toast.success(`Скорость слов: ${newSpeed} трансформаций/мин`)
                             }}
                             min={5}
                             max={120}
@@ -692,6 +699,87 @@ function App() {
                           </Button>
                           <Button
                             onClick={() => setShowSpeedControl(false)}
+                            size="sm"
+                            className="flex-1 bg-primary hover:bg-primary/90"
+                          >
+                            Готово
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  <Popover open={showDefinitionSpeedControl} onOpenChange={setShowDefinitionSpeedControl}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="lg"
+                        className="group text-accent hover:text-accent/80 transition-all hover:scale-110 active:scale-95 ml-4 relative"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Gauge weight="fill" className="text-3xl" />
+                        </motion.div>
+                        {definitionTransformationsPerMinute !== 30 && (
+                          <Badge 
+                            variant="secondary" 
+                            className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-accent/90 text-accent-foreground"
+                          >
+                            {definitionTransformationsPerMinute}/м
+                          </Badge>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-card/95 backdrop-blur-xl border-border/50" align="center">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-heading font-semibold text-lg">Скорость толкований</h4>
+                            <Badge variant="outline" className="font-mono">
+                              {definitionTransformationsPerMinute}/мин
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Частота трансформации слов в толковании
+                          </p>
+                        </div>
+                        <div className="space-y-3">
+                          <Slider
+                            value={[definitionTransformationsPerMinute || 30]}
+                            onValueChange={(value) => {
+                              const newSpeed = value[0]
+                              setDefinitionTransformationsPerMinute(newSpeed)
+                              toast.success(`Скорость толкований: ${newSpeed} трансформаций/мин`)
+                            }}
+                            min={5}
+                            max={120}
+                            step={5}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>5/мин</span>
+                            <span>30/мин</span>
+                            <span>60/мин</span>
+                            <span>90/мин</span>
+                            <span>120/мин</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              setDefinitionTransformationsPerMinute(30)
+                              toast.success('Скорость сброшена: 30/мин')
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Сбросить
+                          </Button>
+                          <Button
+                            onClick={() => setShowDefinitionSpeedControl(false)}
                             size="sm"
                             className="flex-1 bg-primary hover:bg-primary/90"
                           >
@@ -830,7 +918,8 @@ function App() {
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs mx-1">Y</kbd> = learned • 
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> = need review • 
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> = pause • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> = speed
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> = speed • 
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">D</kbd> = definition speed
           </p>
         </div>
       </div>
