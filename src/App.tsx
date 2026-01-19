@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge, Palette } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -57,6 +57,9 @@ function App() {
   const [definitionTransformationsPerMinute, setDefinitionTransformationsPerMinute] = useKV<number>('definition-transformations-per-minute', 30)
   const [showSpeedControl, setShowSpeedControl] = useState(false)
   const [showDefinitionSpeedControl, setShowDefinitionSpeedControl] = useState(false)
+  const [showColorControl, setShowColorControl] = useState(false)
+  const [englishWordColor, setEnglishWordColor] = useKV<string>('english-word-color', 'oklch(0.98 0 0)')
+  const [russianWordColor, setRussianWordColor] = useKV<string>('russian-word-color', 'oklch(0.70 0.20 350)')
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
@@ -461,6 +464,9 @@ function App() {
       } else if (e.key === 'd' || e.key === 'D') {
         e.preventDefault()
         setShowDefinitionSpeedControl(prev => !prev)
+      } else if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault()
+        setShowColorControl(prev => !prev)
       }
     }
 
@@ -566,6 +572,7 @@ function App() {
                   <div className="relative min-h-[200px] flex items-center justify-center">
                     <motion.h1 
                       className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight absolute"
+                      style={{ color: englishWordColor }}
                       animate={{
                         opacity: showTranslation ? 0 : 1,
                         y: showTranslation ? -20 : 0,
@@ -580,7 +587,8 @@ function App() {
                     </motion.h1>
                     
                     <motion.h1 
-                      className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-accent absolute"
+                      className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight absolute"
+                      style={{ color: russianWordColor }}
                       animate={{
                         opacity: showTranslation ? 1 : 0,
                         y: showTranslation ? 0 : 20,
@@ -790,6 +798,129 @@ function App() {
                     </PopoverContent>
                   </Popover>
 
+                  <Popover open={showColorControl} onOpenChange={setShowColorControl}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="lg"
+                        className="group text-foreground hover:text-foreground/80 transition-all hover:scale-110 active:scale-95 ml-4 relative"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Palette weight="fill" className="text-3xl" />
+                        </motion.div>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-96 bg-card/95 backdrop-blur-xl border-border/50" align="center">
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <h4 className="font-heading font-semibold text-lg">Настройка цветов</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Выберите цвета для английских и русских слов
+                          </p>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="space-y-3">
+                            <label className="text-sm font-medium">Цвет английского слова</label>
+                            <div className="grid grid-cols-4 gap-2">
+                              {[
+                                { name: 'Белый', color: 'oklch(0.98 0 0)' },
+                                { name: 'Голубой', color: 'oklch(0.75 0.15 195)' },
+                                { name: 'Фиолетовый', color: 'oklch(0.60 0.20 285)' },
+                                { name: 'Зелёный', color: 'oklch(0.70 0.18 145)' },
+                                { name: 'Жёлтый', color: 'oklch(0.85 0.18 95)' },
+                                { name: 'Оранжевый', color: 'oklch(0.75 0.18 50)' },
+                                { name: 'Розовый', color: 'oklch(0.75 0.20 350)' },
+                                { name: 'Серебро', color: 'oklch(0.80 0.02 270)' },
+                              ].map((preset) => (
+                                <button
+                                  key={preset.name}
+                                  onClick={() => {
+                                    setEnglishWordColor(preset.color)
+                                    toast.success(`Английский: ${preset.name}`)
+                                  }}
+                                  className="group relative h-12 rounded-lg border-2 transition-all hover:scale-110 active:scale-95"
+                                  style={{ 
+                                    backgroundColor: preset.color,
+                                    borderColor: englishWordColor === preset.color ? 'oklch(0.75 0.15 195)' : 'oklch(0.30 0.08 280)'
+                                  }}
+                                  title={preset.name}
+                                >
+                                  {englishWordColor === preset.color && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <Check weight="bold" className="text-background" />
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <label className="text-sm font-medium">Цвет русского слова</label>
+                            <div className="grid grid-cols-4 gap-2">
+                              {[
+                                { name: 'Розовый', color: 'oklch(0.70 0.20 350)' },
+                                { name: 'Красный', color: 'oklch(0.65 0.25 25)' },
+                                { name: 'Голубой', color: 'oklch(0.75 0.15 195)' },
+                                { name: 'Бирюзовый', color: 'oklch(0.70 0.15 195)' },
+                                { name: 'Зелёный', color: 'oklch(0.70 0.18 145)' },
+                                { name: 'Лимонный', color: 'oklch(0.85 0.18 105)' },
+                                { name: 'Янтарный', color: 'oklch(0.70 0.18 65)' },
+                                { name: 'Пурпурный', color: 'oklch(0.65 0.22 320)' },
+                              ].map((preset) => (
+                                <button
+                                  key={preset.name}
+                                  onClick={() => {
+                                    setRussianWordColor(preset.color)
+                                    toast.success(`Русский: ${preset.name}`)
+                                  }}
+                                  className="group relative h-12 rounded-lg border-2 transition-all hover:scale-110 active:scale-95"
+                                  style={{ 
+                                    backgroundColor: preset.color,
+                                    borderColor: russianWordColor === preset.color ? 'oklch(0.75 0.15 195)' : 'oklch(0.30 0.08 280)'
+                                  }}
+                                  title={preset.name}
+                                >
+                                  {russianWordColor === preset.color && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <Check weight="bold" className="text-background" />
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              setEnglishWordColor('oklch(0.98 0 0)')
+                              setRussianWordColor('oklch(0.70 0.20 350)')
+                              toast.success('Цвета сброшены')
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Сбросить
+                          </Button>
+                          <Button
+                            onClick={() => setShowColorControl(false)}
+                            size="sm"
+                            className="flex-1 bg-primary hover:bg-primary/90"
+                          >
+                            Готово
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -919,7 +1050,8 @@ function App() {
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> = need review • 
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> = pause • 
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> = speed • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">D</kbd> = definition speed
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">D</kbd> = definition speed • 
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">C</kbd> = colors
           </p>
         </div>
       </div>
