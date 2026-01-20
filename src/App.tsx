@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge, Palette } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge, Palette, Repeat } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -58,10 +58,13 @@ function App() {
   const [showSpeedControl, setShowSpeedControl] = useState(false)
   const [showDefinitionSpeedControl, setShowDefinitionSpeedControl] = useState(false)
   const [showColorControl, setShowColorControl] = useState(false)
+  const [showRepeatControl, setShowRepeatControl] = useState(false)
   const [englishWordColor, setEnglishWordColor] = useKV<string>('english-word-color', 'oklch(0.98 0 0)')
   const [russianWordColor, setRussianWordColor] = useKV<string>('russian-word-color', 'oklch(0.70 0.20 350)')
   const [englishDefinitionColor, setEnglishDefinitionColor] = useKV<string>('english-definition-color', 'oklch(0.65 0.05 280)')
   const [russianDefinitionColor, setRussianDefinitionColor] = useKV<string>('russian-definition-color', 'oklch(0.70 0.20 350)')
+  const [repeatCount, setRepeatCount] = useKV<number>('repeat-count', 0)
+  const [currentRepetition, setCurrentRepetition] = useState(0)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
@@ -201,6 +204,38 @@ function App() {
     }
   }, [russianDefinitionCache, setRussianDefinitionCache])
 
+  const stopAlternation = useCallback(() => {
+    setIsAlternating(false)
+    setIsPaused(true)
+    if (alternationTimerRef.current) {
+      clearTimeout(alternationTimerRef.current)
+    }
+    if (intervalDecreaseRef.current) {
+      clearInterval(intervalDecreaseRef.current)
+    }
+    if (definitionAlternationTimerRef.current) {
+      clearTimeout(definitionAlternationTimerRef.current)
+    }
+    if (definitionIntervalDecreaseRef.current) {
+      clearInterval(definitionIntervalDecreaseRef.current)
+    }
+  }, [])
+
+  const goToNext = useCallback(() => {
+    stopAlternation()
+    const wordList = words || []
+    setShowTranslation(false)
+    setCurrentIndex((current = 0) => {
+      const next = current + 1
+      if (next >= wordList.length) {
+        setShowCompletion(true)
+        return current
+      }
+      setDirection(1)
+      return next
+    })
+  }, [words, setCurrentIndex, stopAlternation])
+
   useEffect(() => {
     const wordList = words || []
     const index = currentIndex || 0
@@ -215,6 +250,7 @@ function App() {
       setCurrentRussianDefinition('')
       setIsAlternating(true)
       setIsPaused(false)
+      setCurrentRepetition(0)
       
       if (alternationTimerRef.current) {
         clearTimeout(alternationTimerRef.current)
@@ -283,7 +319,25 @@ function App() {
 
     const startAlternation = () => {
       alternationTimerRef.current = setTimeout(() => {
-        setShowTranslation(prev => !prev)
+        setShowTranslation(prev => {
+          const newValue = !prev
+          if (newValue === false) {
+            setCurrentRepetition(prevRep => {
+              const newRep = prevRep + 1
+              const targetRepeatCount = repeatCount || 0
+              
+              if (targetRepeatCount > 0 && newRep >= targetRepeatCount) {
+                setTimeout(() => {
+                  goToNext()
+                  toast.success(`Завершено ${newRep} повторений`)
+                }, 300)
+                return newRep
+              }
+              return newRep
+            })
+          }
+          return newValue
+        })
         startAlternation()
       }, intervalMs)
     }
@@ -295,7 +349,7 @@ function App() {
         clearTimeout(alternationTimerRef.current)
       }
     }
-  }, [currentTranslation, isAlternating, isPaused, transformationsPerMinute])
+  }, [currentTranslation, isAlternating, isPaused, transformationsPerMinute, repeatCount, goToNext])
 
   useEffect(() => {
     if (!currentRussianDefinition || !currentDefinition || !isAlternating || isPaused) return
@@ -357,23 +411,6 @@ function App() {
     }
   }, [currentRussianDefinition, currentDefinition, isAlternating, isPaused, transformationsPerMinute, definitionTransformationsPerMinute])
 
-  const stopAlternation = useCallback(() => {
-    setIsAlternating(false)
-    setIsPaused(true)
-    if (alternationTimerRef.current) {
-      clearTimeout(alternationTimerRef.current)
-    }
-    if (intervalDecreaseRef.current) {
-      clearInterval(intervalDecreaseRef.current)
-    }
-    if (definitionAlternationTimerRef.current) {
-      clearTimeout(definitionAlternationTimerRef.current)
-    }
-    if (definitionIntervalDecreaseRef.current) {
-      clearInterval(definitionIntervalDecreaseRef.current)
-    }
-  }, [])
-
   const togglePause = useCallback(() => {
     setIsPaused(prev => {
       const newPaused = !prev
@@ -397,21 +434,6 @@ function App() {
       return newPaused
     })
   }, [])
-
-  const goToNext = useCallback(() => {
-    stopAlternation()
-    const wordList = words || []
-    setShowTranslation(false)
-    setCurrentIndex((current = 0) => {
-      const next = current + 1
-      if (next >= wordList.length) {
-        setShowCompletion(true)
-        return current
-      }
-      setDirection(1)
-      return next
-    })
-  }, [words, setCurrentIndex, stopAlternation])
 
   const goToPrevious = useCallback(() => {
     stopAlternation()
@@ -483,6 +505,9 @@ function App() {
       } else if (e.key === 'c' || e.key === 'C') {
         e.preventDefault()
         setShowColorControl(prev => !prev)
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault()
+        setShowRepeatControl(prev => !prev)
       }
     }
 
@@ -1013,6 +1038,107 @@ function App() {
                     </PopoverContent>
                   </Popover>
 
+                  <Popover open={showRepeatControl} onOpenChange={setShowRepeatControl}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="lg"
+                        className="group text-secondary hover:text-secondary/80 transition-all hover:scale-110 active:scale-95 ml-4 relative"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Repeat weight="fill" className="text-3xl" />
+                        </motion.div>
+                        {(repeatCount || 0) > 0 && (
+                          <Badge 
+                            variant="secondary" 
+                            className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-secondary text-secondary-foreground"
+                          >
+                            {repeatCount || 0}
+                          </Badge>
+                        )}
+                        {(repeatCount || 0) > 0 && currentRepetition > 0 && (
+                          <Badge 
+                            variant="outline" 
+                            className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 min-w-4 px-1 text-[10px] bg-background/90"
+                          >
+                            {currentRepetition}/{repeatCount || 0}
+                          </Badge>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-card/95 backdrop-blur-xl border-border/50" align="center">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-heading font-semibold text-lg">Повторения</h4>
+                            <Badge variant="outline" className="font-mono">
+                              {repeatCount === 0 ? 'Откл.' : `${repeatCount}x`}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Автопереход после заданного количества повторений
+                          </p>
+                        </div>
+                        <div className="space-y-3">
+                          <Slider
+                            value={[repeatCount || 0]}
+                            onValueChange={(value) => {
+                              const newCount = value[0]
+                              setRepeatCount(newCount)
+                              if (newCount === 0) {
+                                toast.success('Повторения отключены')
+                              } else {
+                                toast.success(`Установлено: ${newCount} повторений`)
+                              }
+                            }}
+                            min={0}
+                            max={20}
+                            step={1}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Откл.</span>
+                            <span>5</span>
+                            <span>10</span>
+                            <span>15</span>
+                            <span>20</span>
+                          </div>
+                        </div>
+                        {(repeatCount || 0) > 0 && (
+                          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Текущее слово:</strong> {currentRepetition} из {repeatCount || 0} повторений
+                            </p>
+                            <Progress value={(currentRepetition / (repeatCount || 1)) * 100} className="h-1" />
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              setRepeatCount(0)
+                              toast.success('Повторения отключены')
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Отключить
+                          </Button>
+                          <Button
+                            onClick={() => setShowRepeatControl(false)}
+                            size="sm"
+                            className="flex-1 bg-primary hover:bg-primary/90"
+                          >
+                            Готово
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1126,7 +1252,8 @@ function App() {
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> = pause • 
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> = speed • 
             <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">D</kbd> = definition speed • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">C</kbd> = colors
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">C</kbd> = colors • 
+            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">R</kbd> = repeats
           </p>
         </div>
       </div>
