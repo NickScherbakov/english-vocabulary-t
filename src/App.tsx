@@ -547,44 +547,44 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen mesh-gradient flex flex-col items-center justify-center p-4 md:p-8">
-      <div className="w-full max-w-4xl space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Badge variant="secondary" className="text-sm tracking-wider bg-card/80 backdrop-blur-sm border-border/50">
-              Word {index + 1} of {wordList.length}
+    <div className="h-screen mesh-gradient flex flex-col p-2 sm:p-4 md:p-8 overflow-hidden">
+      <div className="w-full max-w-4xl mx-auto flex flex-col h-full gap-2 sm:gap-4">
+        <div className="flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Badge variant="secondary" className="text-xs sm:text-sm tracking-wider bg-card/80 backdrop-blur-sm border-border/50">
+              {index + 1}/{wordList.length}
             </Badge>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowStats(true)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors h-8 px-2 sm:px-3"
             >
-              <ChartBar className="mr-2" weight="bold" />
-              Stats
+              <ChartBar className="sm:mr-2" weight="bold" size={18} />
+              <span className="hidden sm:inline">Stats</span>
             </Button>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={restart}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors h-8 px-2 sm:px-3"
           >
-            <ArrowCounterClockwise className="mr-2" weight="bold" />
-            Restart
+            <ArrowCounterClockwise className="sm:mr-2" weight="bold" size={18} />
+            <span className="hidden sm:inline">Restart</span>
           </Button>
         </div>
 
         <Progress 
           value={progress} 
-          className="h-2 bg-muted/30"
+          className="h-1.5 sm:h-2 bg-muted/30 flex-shrink-0"
         />
 
-        <div className="relative">
-          <Card className="relative overflow-hidden bg-card/60 backdrop-blur-2xl border-border/50 shadow-2xl">
+        <div className="relative flex-1 flex flex-col min-h-0">
+          <Card className="relative overflow-hidden bg-card/60 backdrop-blur-2xl border-border/50 shadow-2xl h-full flex flex-col">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 pointer-events-none" />
             
-            <div className="relative p-12 md:p-20 min-h-[400px] flex items-center justify-center">
+            <div className="relative p-4 sm:p-8 md:p-12 flex-1 flex items-center justify-center min-h-0">
               <AnimatePresence mode="wait" custom={direction}>
                 <motion.div
                   key={index}
@@ -608,11 +608,11 @@ function App() {
                     duration: 0.3,
                     ease: [0.4, 0, 0.2, 1]
                   }}
-                  className="text-center space-y-8 w-full"
+                  className="text-center w-full flex flex-col h-full justify-center gap-3 sm:gap-6"
                 >
-                  <div className="relative min-h-[200px] flex items-center justify-center">
+                  <div className="relative flex-1 flex items-center justify-center min-h-0 max-h-[30vh]">
                     <motion.h1 
-                      className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight absolute"
+                      className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4"
                       style={{ color: englishWordColor }}
                       animate={{
                         opacity: showTranslation ? 0 : 1,
@@ -628,7 +628,7 @@ function App() {
                     </motion.h1>
                     
                     <motion.h1 
-                      className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight absolute"
+                      className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4"
                       style={{ color: russianWordColor }}
                       animate={{
                         opacity: showTranslation ? 1 : 0,
@@ -644,35 +644,36 @@ function App() {
                     </motion.h1>
                   </div>
                   
+                  <div className="flex items-center justify-center gap-2 sm:gap-3 flex-shrink-0">
                   <Button
                     onClick={() => speakWord(currentWord)}
                     variant="ghost"
-                    size="lg"
-                    className="group text-secondary hover:text-secondary/80 transition-all hover:scale-110 active:scale-95"
+                    size="sm"
+                    className="group text-secondary hover:text-secondary/80 transition-all hover:scale-110 active:scale-95 h-8 w-8 sm:h-10 sm:w-10 p-0"
                     disabled={isSpeaking}
                   >
                     <motion.div
                       animate={isSpeaking ? { scale: [1, 1.2, 1] } : { scale: 1 }}
                       transition={{ duration: 0.5, repeat: isSpeaking ? Infinity : 0 }}
                     >
-                      <SpeakerHigh weight="fill" className="text-3xl" />
+                      <SpeakerHigh weight="fill" className="text-xl sm:text-2xl" />
                     </motion.div>
                   </Button>
 
                   <Button
                     onClick={togglePause}
                     variant="ghost"
-                    size="lg"
-                    className="group text-accent hover:text-accent/80 transition-all hover:scale-110 active:scale-95 ml-4"
+                    size="sm"
+                    className="group text-accent hover:text-accent/80 transition-all hover:scale-110 active:scale-95 h-8 w-8 sm:h-10 sm:w-10 p-0"
                   >
                     <motion.div
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.95 }}
                     >
                       {isPaused ? (
-                        <Play weight="fill" className="text-3xl" />
+                        <Play weight="fill" className="text-xl sm:text-2xl" />
                       ) : (
-                        <Pause weight="fill" className="text-3xl" />
+                        <Pause weight="fill" className="text-xl sm:text-2xl" />
                       )}
                     </motion.div>
                   </Button>
@@ -681,21 +682,21 @@ function App() {
                     <PopoverTrigger asChild>
                       <Button
                         variant="ghost"
-                        size="lg"
-                        className="group text-primary hover:text-primary/80 transition-all hover:scale-110 active:scale-95 ml-4 relative"
+                        size="sm"
+                        className="group text-primary hover:text-primary/80 transition-all hover:scale-110 active:scale-95 h-8 w-8 sm:h-10 sm:w-10 p-0 relative"
                       >
                         <motion.div
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.95 }}
                         >
-                          <Gauge weight="fill" className="text-3xl" />
+                          <Gauge weight="fill" className="text-xl sm:text-2xl" />
                         </motion.div>
                         {transformationsPerMinute !== 20 && (
                           <Badge 
                             variant="secondary" 
-                            className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-secondary text-secondary-foreground"
+                            className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 text-[9px] sm:h-5 sm:min-w-5 sm:px-1 sm:text-xs bg-secondary text-secondary-foreground"
                           >
-                            {transformationsPerMinute}/м
+                            {transformationsPerMinute}
                           </Badge>
                         )}
                       </Button>
@@ -762,21 +763,21 @@ function App() {
                     <PopoverTrigger asChild>
                       <Button
                         variant="ghost"
-                        size="lg"
-                        className="group text-accent hover:text-accent/80 transition-all hover:scale-110 active:scale-95 ml-4 relative"
+                        size="sm"
+                        className="group text-accent hover:text-accent/80 transition-all hover:scale-110 active:scale-95 h-8 w-8 sm:h-10 sm:w-10 p-0 relative"
                       >
                         <motion.div
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.95 }}
                         >
-                          <Gauge weight="fill" className="text-3xl" />
+                          <Gauge weight="fill" className="text-xl sm:text-2xl" />
                         </motion.div>
                         {definitionTransformationsPerMinute !== 30 && (
                           <Badge 
                             variant="secondary" 
-                            className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-accent/90 text-accent-foreground"
+                            className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 text-[9px] sm:h-5 sm:min-w-5 sm:px-1 sm:text-xs bg-accent/90 text-accent-foreground"
                           >
-                            {definitionTransformationsPerMinute}/м
+                            {definitionTransformationsPerMinute}
                           </Badge>
                         )}
                       </Button>
@@ -843,14 +844,14 @@ function App() {
                     <PopoverTrigger asChild>
                       <Button
                         variant="ghost"
-                        size="lg"
-                        className="group text-foreground hover:text-foreground/80 transition-all hover:scale-110 active:scale-95 ml-4 relative"
+                        size="sm"
+                        className="group text-foreground hover:text-foreground/80 transition-all hover:scale-110 active:scale-95 h-8 w-8 sm:h-10 sm:w-10 p-0 relative"
                       >
                         <motion.div
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.95 }}
                         >
-                          <Palette weight="fill" className="text-3xl" />
+                          <Palette weight="fill" className="text-xl sm:text-2xl" />
                         </motion.div>
                       </Button>
                     </PopoverTrigger>
@@ -1042,19 +1043,19 @@ function App() {
                     <PopoverTrigger asChild>
                       <Button
                         variant="ghost"
-                        size="lg"
-                        className="group text-secondary hover:text-secondary/80 transition-all hover:scale-110 active:scale-95 ml-4 relative"
+                        size="sm"
+                        className="group text-secondary hover:text-secondary/80 transition-all hover:scale-110 active:scale-95 h-8 w-8 sm:h-10 sm:w-10 p-0 relative"
                       >
                         <motion.div
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.95 }}
                         >
-                          <Repeat weight="fill" className="text-3xl" />
+                          <Repeat weight="fill" className="text-xl sm:text-2xl" />
                         </motion.div>
                         {(repeatCount || 0) > 0 && (
                           <Badge 
                             variant="secondary" 
-                            className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-secondary text-secondary-foreground"
+                            className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 text-[9px] sm:h-5 sm:min-w-5 sm:px-1 sm:text-xs bg-secondary text-secondary-foreground"
                           >
                             {repeatCount || 0}
                           </Badge>
@@ -1062,7 +1063,7 @@ function App() {
                         {(repeatCount || 0) > 0 && currentRepetition > 0 && (
                           <Badge 
                             variant="outline" 
-                            className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 min-w-4 px-1 text-[10px] bg-background/90"
+                            className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-3 min-w-3 px-0.5 text-[8px] sm:h-4 sm:min-w-4 sm:px-1 sm:text-[10px] bg-background/90"
                           >
                             {currentRepetition}/{repeatCount || 0}
                           </Badge>
@@ -1138,23 +1139,24 @@ function App() {
                       </div>
                     </PopoverContent>
                   </Popover>
+                  </div>
 
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.6 }}
-                    className="max-w-3xl mx-auto px-4 min-h-[120px] flex items-center justify-center"
+                    className="max-w-3xl mx-auto px-2 sm:px-4 flex-1 flex items-center justify-center min-h-0 overflow-hidden"
                   >
                     {isLoadingDefinition || isLoadingRussianDefinition ? (
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                        <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
-                        <span className="text-sm">Loading definition...</span>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs sm:text-sm">Loading...</span>
                       </div>
                     ) : currentDefinition && currentRussianDefinition ? (
-                      <div className="space-y-3 w-full">
-                        <div className="relative min-h-[60px] flex items-center justify-center">
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="relative w-full h-full flex items-center justify-center">
                           <motion.p 
-                            className="text-lg md:text-xl leading-relaxed text-center absolute inset-0 flex items-center justify-center px-4"
+                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute inset-0 flex items-center justify-center px-2 sm:px-4"
                             style={{ color: englishDefinitionColor }}
                             animate={{
                               opacity: definitionWordStates.some(Boolean) ? 0 : 1,
@@ -1170,7 +1172,7 @@ function App() {
                           </motion.p>
                           
                           <motion.p 
-                            className="text-lg md:text-xl leading-relaxed text-center absolute inset-0 flex items-center justify-center px-4"
+                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute inset-0 flex items-center justify-center px-2 sm:px-4"
                             style={{ color: russianDefinitionColor }}
                             animate={{
                               opacity: definitionWordStates.some(Boolean) ? 1 : 0,
@@ -1187,7 +1189,7 @@ function App() {
                         </div>
                       </div>
                     ) : currentDefinition ? (
-                      <p className="text-lg md:text-xl text-muted-foreground leading-relaxed italic">
+                      <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed italic px-2">
                         "{currentDefinition}"
                       </p>
                     ) : null}
@@ -1197,63 +1199,63 @@ function App() {
             </div>
           </Card>
 
-          <div className="flex gap-4 mt-6 justify-center">
+          <div className="flex gap-2 sm:gap-3 justify-center flex-shrink-0">
             <Button
               onClick={goToPrevious}
               disabled={index === 0}
-              size="lg"
-              className="group bg-card/80 hover:bg-card backdrop-blur-sm border border-border/50 disabled:opacity-30 transition-all hover:scale-105 active:scale-95"
+              size="sm"
+              className="group bg-card/80 hover:bg-card backdrop-blur-sm border border-border/50 disabled:opacity-30 transition-all hover:scale-105 active:scale-95 h-10 w-10 sm:h-12 sm:w-12 p-0"
             >
-              <CaretLeft weight="bold" className="text-2xl group-hover:text-secondary transition-colors" />
+              <CaretLeft weight="bold" className="text-xl sm:text-2xl group-hover:text-secondary transition-colors" />
             </Button>
             
             <Button
               onClick={() => markAsLearned(currentWord, false)}
-              size="lg"
+              size="sm"
               variant={isCurrentWordMarked ? "default" : "outline"}
-              className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 ${
+              className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 w-10 sm:h-12 sm:w-12 p-0 ${
                 isCurrentWordMarked 
                   ? 'bg-destructive/80 hover:bg-destructive border-destructive text-destructive-foreground' 
                   : 'bg-card/80 hover:bg-card border-border/50 hover:border-destructive/50'
               }`}
             >
-              <X weight="bold" className="text-2xl" />
+              <X weight="bold" className="text-xl sm:text-2xl" />
             </Button>
             
             <Button
               onClick={() => markAsLearned(currentWord, true)}
-              size="lg"
+              size="sm"
               variant={isCurrentWordLearned ? "default" : "outline"}
-              className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 ${
+              className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 w-10 sm:h-12 sm:w-12 p-0 ${
                 isCurrentWordLearned 
                   ? 'bg-secondary hover:bg-secondary/90 border-secondary text-secondary-foreground shadow-lg shadow-secondary/50' 
                   : 'bg-card/80 hover:bg-card border-border/50 hover:border-secondary/50'
               }`}
             >
-              <Check weight="bold" className="text-2xl" />
+              <Check weight="bold" className="text-xl sm:text-2xl" />
             </Button>
             
             <Button
               onClick={goToNext}
               disabled={index >= wordList.length - 1}
-              size="lg"
-              className="group bg-primary hover:bg-primary/90 backdrop-blur-sm disabled:opacity-30 transition-all hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-primary/50"
+              size="sm"
+              className="group bg-primary hover:bg-primary/90 backdrop-blur-sm disabled:opacity-30 transition-all hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-primary/50 h-10 w-10 sm:h-12 sm:w-12 p-0"
             >
-              <CaretRight weight="bold" className="text-2xl" />
+              <CaretRight weight="bold" className="text-xl sm:text-2xl" />
             </Button>
           </div>
         </div>
 
-        <div className="text-center text-sm text-muted-foreground">
+        <div className="text-center text-xs sm:text-sm text-muted-foreground flex-shrink-0 hidden sm:block">
           <p className="tracking-wide">
-            Press <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> or <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> to navigate • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs mx-1">Y</kbd> = learned • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> = need review • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> = pause • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> = speed • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">D</kbd> = definition speed • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">C</kbd> = colors • 
-            <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">R</kbd> = repeats
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">←</kbd> / <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">→</kbd> navigate • 
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs mx-1">Y</kbd> learned • 
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">N</kbd> review • 
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">P</kbd> pause • 
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">S</kbd> speed • 
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">D</kbd> def speed • 
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">C</kbd> colors • 
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">R</kbd> repeats
           </p>
         </div>
       </div>
