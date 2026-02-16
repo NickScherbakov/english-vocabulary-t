@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge, Palette, Repeat, Atom, Shuffle, Fire } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge, Palette, Repeat, Atom, Shuffle, Fire, Brain, Eye, BookOpen, Lightning, ArrowsClockwise } from '@phosphor-icons/react'
 import { useSwipe } from '@/hooks/use-swipe'
+import { useSpacedRepetition, SR_QUALITY, type SRQuality } from '@/hooks/use-spaced-repetition'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -76,6 +77,12 @@ function App() {
   const [lastStudyDate, setLastStudyDate] = useKV<string>('last-study-date', '')
   const [streakCount, setStreakCount] = useKV<number>('streak-count', 0)
   const [wordsStudiedToday, setWordsStudiedToday] = useKV<number>('words-studied-today', 0)
+  const [quizMode, setQuizMode] = useKV<boolean>('quiz-mode', false)
+  const [quizRevealed, setQuizRevealed] = useState(false)
+  const [exampleSentence, setExampleSentence] = useState<string>('')
+  const [isLoadingExample, setIsLoadingExample] = useState(false)
+  const [exampleCache, setExampleCache] = useKV<{ [key: string]: string }>('example-cache', {})
+  const { reviewWord: srReviewWord, getWordStatus: srGetWordStatus, getStats: srGetStats, getDueWords } = useSpacedRepetition()
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
@@ -247,6 +254,28 @@ function App() {
     }
   }, [russianDefinitionCache, setRussianDefinitionCache])
 
+  const getExampleSentence = useCallback(async (word: string) => {
+    const cache = exampleCache || {}
+    if (cache[word]) {
+      setExampleSentence(cache[word])
+      return
+    }
+    setIsLoadingExample(true)
+    try {
+      const sentence = await window.spark.llm(
+        `Write one short, natural English sentence using the word "${word}". The sentence should be simple enough for a language learner. Return ONLY the sentence, nothing else.`,
+        'gpt-4o-mini'
+      )
+      const clean = sentence.trim()
+      setExampleSentence(clean)
+      setExampleCache((c = {}) => ({ ...c, [word]: clean }))
+    } catch {
+      setExampleSentence('Example unavailable')
+    } finally {
+      setIsLoadingExample(false)
+    }
+  }, [exampleCache, setExampleCache])
+
   const stopAlternation = useCallback(() => {
     setIsAlternating(false)
     setIsPaused(true)
@@ -291,8 +320,10 @@ function App() {
       setCurrentTranslation('')
       setCurrentDefinition('')
       setCurrentRussianDefinition('')
-      setIsAlternating(true)
-      setIsPaused(false)
+      setExampleSentence('')
+      setQuizRevealed(false)
+      setIsAlternating(!quizMode)
+      setIsPaused(!!quizMode)
       setCurrentRepetition(0)
       
       if (alternationTimerRef.current) {
@@ -507,6 +538,35 @@ function App() {
     }
   }, [setLearnedWords, goToNext, stopAlternation, setWordsStudiedToday])
 
+  const revealQuiz = useCallback(() => {
+    setQuizRevealed(true)
+    setShowTranslation(true)
+    speakWord(currentWord)
+  }, [speakWord, currentWord])
+
+  const rateWord = useCallback((quality: SRQuality) => {
+    srReviewWord(currentWord, quality)
+    setWordsStudiedToday((c = 0) => c + 1)
+    
+    if (quality >= 3) {
+      markAsLearned(currentWord, true)
+    }
+
+    const messages: Record<number, string> = {
+      [SR_QUALITY.EASY]: 'Отлично! Увидим нескоро 🌟',
+      [SR_QUALITY.GOOD]: 'Хорошо! ✓',
+      [SR_QUALITY.HARD]: 'Повторим позже',
+      [SR_QUALITY.AGAIN]: 'Повторим скоро',
+    }
+    toast(messages[quality] || 'Оценено')
+
+    setTimeout(() => {
+      setQuizRevealed(false)
+      setShowTranslation(false)
+      goToNext()
+    }, 400)
+  }, [srReviewWord, currentWord, goToNext, setWordsStudiedToday, markAsLearned])
+
   const restart = useCallback(() => {
     stopAlternation()
     setShowTranslation(false)
@@ -523,16 +583,43 @@ function App() {
   const isCurrentWordLearned = learned[currentWord] === true
   const isCurrentWordMarked = learned[currentWord] === false
 
+  const dueWords = getDueWords(allWords)
+  const dueCount = dueWords.length
+  const srStats = srGetStats(allWords)
+  const currentWordSRStatus = srGetWordStatus(currentWord)
+
   const swipeHandlers = useSwipe(goToNext, goToPrevious, 50)
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === ' ') {
+      if (e.key === ' ') {
+        e.preventDefault()
+        if (quizMode && !quizRevealed) {
+          revealQuiz()
+        } else {
+          goToNext()
+        }
+      } else if (e.key === 'ArrowRight') {
         e.preventDefault()
         goToNext()
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
         goToPrevious()
+      } else if (e.key === 'q' || e.key === 'Q') {
+        e.preventDefault()
+        setQuizMode((prev = false) => {
+          const next = !prev
+          toast(next ? 'Режим квиза включён 🧠' : 'Режим квиза выключен')
+          return next
+        })
+      } else if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault()
+        getExampleSentence(currentWord)
+      } else if (quizMode && quizRevealed) {
+        if (e.key === '1') { e.preventDefault(); rateWord(SR_QUALITY.AGAIN) }
+        else if (e.key === '2') { e.preventDefault(); rateWord(SR_QUALITY.HARD) }
+        else if (e.key === '3') { e.preventDefault(); rateWord(SR_QUALITY.GOOD) }
+        else if (e.key === '4') { e.preventDefault(); rateWord(SR_QUALITY.EASY) }
       } else if (e.key === 'y' || e.key === 'Y') {
         e.preventDefault()
         markAsLearned(currentWord, true)
@@ -562,7 +649,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [goToNext, goToPrevious, markAsLearned, currentWord, togglePause])
+  }, [goToNext, goToPrevious, markAsLearned, currentWord, togglePause, quizMode, quizRevealed, revealQuiz, rateWord, getExampleSentence, setQuizMode])
 
   if (isLoading) {
     return (
@@ -637,6 +724,38 @@ function App() {
                 <Shuffle className="sm:mr-2" weight="bold" size={18} />
                 <span className="hidden sm:inline">{reviewMode ? 'All' : 'Review'}</span>
               </Button>
+            )}
+            <Button
+              variant={quizMode ? "default" : "ghost"}
+              size="sm"
+              onClick={() => {
+                setQuizMode((prev = false) => {
+                  const next = !prev
+                  if (next) {
+                    setQuizRevealed(false)
+                    setShowTranslation(false)
+                    setIsPaused(true)
+                    setIsAlternating(false)
+                  }
+                  toast(next ? 'Режим квиза 🧠' : 'Обычный режим')
+                  return next
+                })
+              }}
+              className={`transition-colors h-8 px-2 sm:px-3 ${
+                quizMode 
+                  ? 'bg-violet-600 hover:bg-violet-700 text-white' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title="Quiz mode (Q)"
+            >
+              <Brain className="sm:mr-2" weight="bold" size={18} />
+              <span className="hidden sm:inline">Quiz</span>
+            </Button>
+            {dueCount > 0 && (
+              <Badge variant="outline" className="text-xs tracking-wider bg-orange-500/20 border-orange-400/40 text-orange-300 gap-1">
+                <ArrowsClockwise weight="bold" size={14} />
+                {dueCount}
+              </Badge>
             )}
             <Button
               variant="ghost"
@@ -1410,7 +1529,88 @@ function App() {
                     transition={{ delay: 0.5, duration: 0.6 }}
                     className="w-full px-4 sm:px-8 md:px-12 flex-1 flex items-center justify-center min-h-0"
                   >
-                    {isLoadingDefinition || isLoadingRussianDefinition ? (
+                    {quizMode && !quizRevealed ? (
+                      <div className="flex flex-col items-center gap-4 w-full">
+                        <motion.div
+                          animate={{ opacity: [0.3, 0.7, 0.3] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                          className="text-center"
+                        >
+                          <p className="text-4xl sm:text-5xl font-heading text-muted-foreground/30 select-none">?</p>
+                          <p className="text-sm text-muted-foreground/50 mt-2">Вспомните перевод</p>
+                        </motion.div>
+                        <Button
+                          onClick={revealQuiz}
+                          className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2 text-sm sm:text-base transition-all hover:scale-105 active:scale-95"
+                        >
+                          <Eye weight="bold" className="mr-2" size={18} />
+                          Показать
+                        </Button>
+                        {currentWordSRStatus !== 'new' && (
+                          <Badge variant="outline" className="text-xs text-muted-foreground/60">
+                            {currentWordSRStatus === 'due' ? '⏰ Пора повторить' :
+                             currentWordSRStatus === 'mastered' ? '⭐ Усвоено' : '📚 Изучается'}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : quizMode && quizRevealed ? (
+                      <div className="flex flex-col items-center gap-3 w-full">
+                        {isTranslating ? (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                            <span className="text-sm">Загрузка...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <motion.p
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="text-lg sm:text-xl font-medium text-center"
+                              style={{ color: russianWordColor }}
+                            >
+                              {currentTranslation}
+                            </motion.p>
+                            {currentDefinition && (
+                              <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className="text-xs sm:text-sm text-muted-foreground italic text-center max-w-md"
+                              >
+                                {currentDefinition}
+                              </motion.p>
+                            )}
+                            {exampleSentence && (
+                              <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.3 }}
+                                className="text-xs text-muted-foreground/70 text-center max-w-md border-t border-border/30 pt-2"
+                              >
+                                <BookOpen weight="bold" size={12} className="inline mr-1 align-text-bottom" />
+                                {exampleSentence}
+                              </motion.p>
+                            )}
+                            {!exampleSentence && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => getExampleSentence(currentWord)}
+                                disabled={isLoadingExample}
+                                className="text-xs text-muted-foreground/50 hover:text-muted-foreground h-6 px-2"
+                              >
+                                {isLoadingExample ? (
+                                  <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin mr-1" />
+                                ) : (
+                                  <BookOpen weight="bold" size={12} className="mr-1" />
+                                )}
+                                Пример
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ) : isLoadingDefinition || isLoadingRussianDefinition ? (
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
                         <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
                         <span className="text-xs sm:text-sm">Loading...</span>
@@ -1471,32 +1671,84 @@ function App() {
             >
               <CaretLeft weight="bold" className="text-xl sm:text-2xl group-hover:text-secondary transition-colors" />
             </Button>
-            
-            <Button
-              onClick={() => markAsLearned(currentWord, false)}
-              size="sm"
-              variant={isCurrentWordMarked ? "default" : "outline"}
-              className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 w-10 sm:h-12 sm:w-12 p-0 ${
-                isCurrentWordMarked 
-                  ? 'bg-destructive/80 hover:bg-destructive border-destructive text-destructive-foreground' 
-                  : 'bg-card/80 hover:bg-card border-border/50 hover:border-destructive/50'
-              }`}
-            >
-              <X weight="bold" className="text-xl sm:text-2xl" />
-            </Button>
-            
-            <Button
-              onClick={() => markAsLearned(currentWord, true)}
-              size="sm"
-              variant={isCurrentWordLearned ? "default" : "outline"}
-              className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 w-10 sm:h-12 sm:w-12 p-0 ${
-                isCurrentWordLearned 
-                  ? 'bg-secondary hover:bg-secondary/90 border-secondary text-secondary-foreground shadow-lg shadow-secondary/50' 
-                  : 'bg-card/80 hover:bg-card border-border/50 hover:border-secondary/50'
-              }`}
-            >
-              <Check weight="bold" className="text-xl sm:text-2xl" />
-            </Button>
+
+            {quizMode && quizRevealed ? (
+              <>
+                <Button
+                  onClick={() => rateWord(SR_QUALITY.AGAIN)}
+                  size="sm"
+                  className="group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 sm:h-12 px-2 sm:px-3 bg-red-500/80 hover:bg-red-500 text-white border-red-400/50"
+                  title="Забыл (1)"
+                >
+                  <ArrowsClockwise weight="bold" className="text-lg sm:text-xl mr-0.5 sm:mr-1" />
+                  <span className="text-xs sm:text-sm font-medium">Забыл</span>
+                </Button>
+                <Button
+                  onClick={() => rateWord(SR_QUALITY.HARD)}
+                  size="sm"
+                  className="group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 sm:h-12 px-2 sm:px-3 bg-orange-500/80 hover:bg-orange-500 text-white border-orange-400/50"
+                  title="Трудно (2)"
+                >
+                  <Lightning weight="bold" className="text-lg sm:text-xl mr-0.5 sm:mr-1" />
+                  <span className="text-xs sm:text-sm font-medium">Трудно</span>
+                </Button>
+                <Button
+                  onClick={() => rateWord(SR_QUALITY.GOOD)}
+                  size="sm"
+                  className="group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 sm:h-12 px-2 sm:px-3 bg-emerald-500/80 hover:bg-emerald-500 text-white border-emerald-400/50"
+                  title="Хорошо (3)"
+                >
+                  <Check weight="bold" className="text-lg sm:text-xl mr-0.5 sm:mr-1" />
+                  <span className="text-xs sm:text-sm font-medium">Хорошо</span>
+                </Button>
+                <Button
+                  onClick={() => rateWord(SR_QUALITY.EASY)}
+                  size="sm"
+                  className="group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 sm:h-12 px-2 sm:px-3 bg-sky-500/80 hover:bg-sky-500 text-white border-sky-400/50"
+                  title="Легко (4)"
+                >
+                  <Fire weight="bold" className="text-lg sm:text-xl mr-0.5 sm:mr-1" />
+                  <span className="text-xs sm:text-sm font-medium">Легко</span>
+                </Button>
+              </>
+            ) : quizMode && !quizRevealed ? (
+              <Button
+                onClick={revealQuiz}
+                size="sm"
+                className="group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 sm:h-12 px-6 sm:px-8 bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                <Eye weight="bold" className="text-lg sm:text-xl mr-2" />
+                <span className="text-sm sm:text-base font-medium">Показать (Space)</span>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={() => markAsLearned(currentWord, false)}
+                  size="sm"
+                  variant={isCurrentWordMarked ? "default" : "outline"}
+                  className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 w-10 sm:h-12 sm:w-12 p-0 ${
+                    isCurrentWordMarked 
+                      ? 'bg-destructive/80 hover:bg-destructive border-destructive text-destructive-foreground' 
+                      : 'bg-card/80 hover:bg-card border-border/50 hover:border-destructive/50'
+                  }`}
+                >
+                  <X weight="bold" className="text-xl sm:text-2xl" />
+                </Button>
+                
+                <Button
+                  onClick={() => markAsLearned(currentWord, true)}
+                  size="sm"
+                  variant={isCurrentWordLearned ? "default" : "outline"}
+                  className={`group backdrop-blur-sm transition-all hover:scale-105 active:scale-95 h-10 w-10 sm:h-12 sm:w-12 p-0 ${
+                    isCurrentWordLearned 
+                      ? 'bg-secondary hover:bg-secondary/90 border-secondary text-secondary-foreground shadow-lg shadow-secondary/50' 
+                      : 'bg-card/80 hover:bg-card border-border/50 hover:border-secondary/50'
+                  }`}
+                >
+                  <Check weight="bold" className="text-xl sm:text-2xl" />
+                </Button>
+              </>
+            )}
             
             <Button
               onClick={goToNext}
@@ -1512,77 +1764,101 @@ function App() {
         <div className="text-center text-xs sm:text-sm text-muted-foreground flex-shrink-0 hidden sm:block">
           <p className="tracking-wide">
             <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">←</kbd> / <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">→</kbd> navigate • 
-            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs mx-1">Y</kbd> learned • 
-            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">N</kbd> review • 
-            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">P</kbd> pause • 
-            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">S</kbd> speed • 
-            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">D</kbd> def speed • 
-            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">C</kbd> colors • 
-            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">R</kbd> repeats • 
-            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">A</kbd> particles
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs mx-1">Q</kbd> quiz • 
+            {quizMode ? (
+              <>
+                <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">Space</kbd> reveal • 
+                <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs mx-1">1-4</kbd> rate • 
+              </>
+            ) : (
+              <>
+                <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs mx-1">Y</kbd> learned • 
+                <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">N</kbd> review • 
+                <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">P</kbd> pause • 
+              </>
+            )}
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">E</kbd> example
           </p>
         </div>
       </div>
 
       <Dialog open={showStats} onOpenChange={setShowStats}>
-        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-heading">📊 Learning Progress</DialogTitle>
+            <DialogTitle className="text-3xl font-heading">📊 Прогресс обучения</DialogTitle>
             <DialogDescription className="text-lg pt-4">
-              Track your vocabulary journey
+              Интервальное повторение SM-2
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
-            <div className="grid grid-cols-3 gap-4">
-              <Card className="p-6 bg-secondary/20 border-secondary/30">
+            <div className="grid grid-cols-4 gap-3">
+              <Card className="p-4 bg-blue-500/10 border-blue-400/30">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-secondary">{learnedCount}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Learned</div>
+                  <div className="text-2xl font-bold text-blue-400">{srStats.new}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Новые</div>
                 </div>
               </Card>
-              <Card className="p-6 bg-destructive/20 border-destructive/30">
+              <Card className="p-4 bg-orange-500/10 border-orange-400/30">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-destructive">{reviewCount}</div>
-                  <div className="text-sm text-muted-foreground mt-1">To Review</div>
+                  <div className="text-2xl font-bold text-orange-400">{srStats.due}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Повторить</div>
                 </div>
               </Card>
-              <Card className="p-6 bg-primary/20 border-primary/30">
+              <Card className="p-4 bg-emerald-500/10 border-emerald-400/30">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">{wordList.length}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Total</div>
+                  <div className="text-2xl font-bold text-emerald-400">{srStats.learning}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Изучаются</div>
+                </div>
+              </Card>
+              <Card className="p-4 bg-violet-500/10 border-violet-400/30">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-violet-400">{srStats.mastered}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Усвоены</div>
                 </div>
               </Card>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <Card className="p-4 bg-accent/20 border-accent/30">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-accent flex items-center justify-center gap-1">
-                    <Fire weight="fill" size={22} />
+                    <Fire weight="fill" size={20} />
                     {streakCount || 0}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1">Day Streak</div>
+                  <div className="text-xs text-muted-foreground mt-1">Серия дней</div>
                 </div>
               </Card>
               <Card className="p-4 bg-secondary/20 border-secondary/30">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-secondary">{wordsStudiedToday || 0}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Today</div>
+                  <div className="text-xs text-muted-foreground mt-1">Сегодня</div>
+                </div>
+              </Card>
+              <Card className="p-4 bg-primary/20 border-primary/30">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">{srStats.totalReviews}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Повторений</div>
                 </div>
               </Card>
             </div>
             
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Overall Progress</span>
-                <span className="font-medium">{Math.round((learnedCount / wordList.length) * 100)}%</span>
+                <span className="text-muted-foreground">Освоение словаря</span>
+                <span className="font-medium">{Math.round(((srStats.mastered + srStats.learning) / wordList.length) * 100)}%</span>
               </div>
-              <Progress value={(learnedCount / wordList.length) * 100} className="h-3" />
+              <Progress value={((srStats.mastered + srStats.learning) / wordList.length) * 100} className="h-3" />
             </div>
+
+            {srStats.totalLapses > 0 && (
+              <div className="text-xs text-muted-foreground text-center">
+                Забыто и выучено заново: {srStats.totalLapses} раз — ошибки это нормально!
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button onClick={() => setShowStats(false)} className="bg-primary hover:bg-primary/90">
-              Continue Learning
+              Продолжить
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1646,13 +1922,28 @@ function App() {
             {guideLanguage === 'ru' ? (
               <div className="space-y-4">
                 <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-violet-500/20 border-2 border-violet-400 flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">🧠</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Режим квиза (SM-2)</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Нажмите <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Q</kbd> для включения режима квиза. 
+                      Вам показывается английское слово — вспомните перевод мысленно, затем нажмите «Показать». 
+                      Оцените себя: Забыл / Трудно / Хорошо / Легко. Алгоритм SM-2 (как в Anki) рассчитает 
+                      оптимальный интервал повторения — от минут до месяцев.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 items-start">
                   <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
                     <span className="text-2xl">🔄</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="font-heading text-lg font-semibold mb-1">Автоматическая трансформация</h3>
                     <p className="text-sm text-muted-foreground">
-                      Слова автоматически чередуются между английским и русским переводом. Определения также трансформируются между языками для лучшего запоминания.
+                      В обычном режиме слова автоматически чередуются между английским и русским переводом. Определения также трансформируются между языками для лучшего запоминания.
                     </p>
                   </div>
                 </div>
@@ -1665,8 +1956,11 @@ function App() {
                     <h3 className="font-heading text-lg font-semibold mb-1">Горячие клавиши</h3>
                     <div className="text-sm text-muted-foreground space-y-1">
                       <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> / <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> - навигация по словам</p>
-                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Y</kbd> - отметить слово как изученное</p>
-                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> - отметить для повторения</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Q</kbd> - включить/выключить квиз</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Space</kbd> - показать перевод (квиз) / следующее слово</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">1</kbd>-<kbd className="px-2 py-1 bg-muted/50 rounded text-xs">4</kbd> - оценка (Забыл/Трудно/Хорошо/Легко)</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">E</kbd> - пример предложения</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Y</kbd> - изучено / <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> - на повторение</p>
                       <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> - пауза/возобновить</p>
                     </div>
                   </div>
@@ -1715,13 +2009,28 @@ function App() {
             ) : (
               <div className="space-y-4">
                 <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-violet-500/20 border-2 border-violet-400 flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">🧠</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Quiz Mode (SM-2)</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Press <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Q</kbd> to toggle quiz mode.
+                      You see the English word — recall the translation mentally, then reveal it.
+                      Rate yourself: Again / Hard / Good / Easy. The SM-2 algorithm (same as Anki) calculates
+                      optimal review intervals — from minutes to months.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 items-start">
                   <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
                     <span className="text-2xl">🔄</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="font-heading text-lg font-semibold mb-1">Automatic Transformation</h3>
                     <p className="text-sm text-muted-foreground">
-                      Words automatically alternate between English and Russian translation. Definitions also transform between languages for better retention.
+                      In normal mode, words automatically alternate between English and Russian translation. Definitions also transform between languages for better retention.
                     </p>
                   </div>
                 </div>
@@ -1734,8 +2043,11 @@ function App() {
                     <h3 className="font-heading text-lg font-semibold mb-1">Keyboard Shortcuts</h3>
                     <div className="text-sm text-muted-foreground space-y-1">
                       <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> / <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> - navigate words</p>
-                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Y</kbd> - mark word as learned</p>
-                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> - mark for review</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Q</kbd> - toggle quiz mode</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Space</kbd> - reveal (quiz) / next word</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">1</kbd>-<kbd className="px-2 py-1 bg-muted/50 rounded text-xs">4</kbd> - rate (Again/Hard/Good/Easy)</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">E</kbd> - example sentence</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Y</kbd> - learned / <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> - review</p>
                       <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> - pause/resume</p>
                     </div>
                   </div>
