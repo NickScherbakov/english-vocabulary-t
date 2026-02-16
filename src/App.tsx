@@ -1153,10 +1153,10 @@ function App() {
                         <span className="text-xs sm:text-sm">Loading...</span>
                       </div>
                     ) : currentDefinition && currentRussianDefinition ? (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="relative w-full h-full flex items-center justify-center">
+                      <div className="w-full flex items-center justify-center">
+                        <div className="relative w-full min-h-[3rem] flex items-center justify-center">
                           <motion.p 
-                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute inset-0 flex items-center justify-center px-2 sm:px-4"
+                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute w-full px-2 sm:px-4 italic"
                             style={{ color: englishDefinitionColor }}
                             animate={{
                               opacity: definitionWordStates.some(Boolean) ? 0 : 1,
@@ -1168,11 +1168,11 @@ function App() {
                               ease: [0.4, 0, 0.2, 1]
                             }}
                           >
-                            <span className="italic">{currentDefinition}</span>
+                            {currentDefinition}
                           </motion.p>
                           
                           <motion.p 
-                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute inset-0 flex items-center justify-center px-2 sm:px-4"
+                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute w-full px-2 sm:px-4 font-medium italic"
                             style={{ color: russianDefinitionColor }}
                             animate={{
                               opacity: definitionWordStates.some(Boolean) ? 1 : 0,
@@ -1184,13 +1184,13 @@ function App() {
                               ease: [0.4, 0, 0.2, 1]
                             }}
                           >
-                            <span className="font-medium italic">{currentRussianDefinition}</span>
+                            {currentRussianDefinition}
                           </motion.p>
                         </div>
                       </div>
                     ) : currentDefinition ? (
-                      <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed italic px-2">
-                        "{currentDefinition}"
+                      <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed italic px-2 text-center">
+                        {currentDefinition}
                       </p>
                     ) : null}
                   </motion.div>
