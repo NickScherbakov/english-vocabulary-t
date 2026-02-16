@@ -1145,7 +1145,7 @@ function App() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.6 }}
-                    className="max-w-3xl mx-auto px-2 sm:px-4 flex-1 flex items-center justify-center min-h-0 overflow-hidden"
+                    className="w-full px-4 sm:px-8 md:px-12 flex-1 flex items-center justify-center min-h-0"
                   >
                     {isLoadingDefinition || isLoadingRussianDefinition ? (
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -1156,7 +1156,7 @@ function App() {
                       <div className="w-full flex items-center justify-center">
                         <div className="relative w-full min-h-[3rem] flex items-center justify-center">
                           <motion.p 
-                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute w-full px-2 sm:px-4 italic"
+                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute w-full italic"
                             style={{ color: englishDefinitionColor }}
                             animate={{
                               opacity: definitionWordStates.some(Boolean) ? 0 : 1,
@@ -1172,7 +1172,7 @@ function App() {
                           </motion.p>
                           
                           <motion.p 
-                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute w-full px-2 sm:px-4 font-medium italic"
+                            className="text-sm sm:text-base md:text-lg leading-relaxed text-center absolute w-full font-medium italic"
                             style={{ color: russianDefinitionColor }}
                             animate={{
                               opacity: definitionWordStates.some(Boolean) ? 1 : 0,
@@ -1189,7 +1189,7 @@ function App() {
                         </div>
                       </div>
                     ) : currentDefinition ? (
-                      <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed italic px-2 text-center">
+                      <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed italic text-center w-full">
                         {currentDefinition}
                       </p>
                     ) : null}
