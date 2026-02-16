@@ -3,6 +3,7 @@
     "private": true,
     "version": "0.0.0",
     "type": "module",
+    "description": "Watch words dissolve into particles and reform in your memory. A mesmerizing spaced-repetition vocabulary trainer with particle morph animations for 10,000 English words.",
     "scripts": {
         "dev": "vite",
         "kill": "fuser -k 5000/tcp",
