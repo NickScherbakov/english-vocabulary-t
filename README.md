@@ -2,17 +2,21 @@
 
 <div align="center">
 
-**An immersive, particle-animated flashcard application for mastering the 10,000 most common English words**
+**Watch words dissolve into particles and reform in your memory forever. A mesmerizing spaced-repetition vocabulary trainer that transforms 10,000 English words into visual art.**
 
-[Features](#-features) • [Demo](#-demo) • [Installation](#-installation) • [Usage](#-usage) • [Shortcuts](#-keyboard-shortcuts) • [Tech Stack](#-technology-stack)
+[Description](#-description) • [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Shortcuts](#-keyboard-shortcuts) • [Tech Stack](#-technology-stack)
 
 </div>
 
 ---
 
-## 📖 About
+## 📖 Description
 
-**Word Flow** is a modern, visually stunning vocabulary learning application designed for language learners who want to build English vocabulary through focused, distraction-free study. Using proven spaced repetition algorithms (SM-2, the same system as Anki), beautiful particle animations, and intelligent learning features, Word Flow makes vocabulary acquisition both effective and enjoyable.
+**Transform words into particles, knowledge into mastery.** Word Flow is a hypnotic vocabulary learning experience where English words literally dissolve and reconstruct before your eyes. Watch as each of the 10,000 most common English words morphs through mesmerizing particle effects—dust clouds, smoke trails, or water droplets—while a battle-tested spaced repetition algorithm ensures they stick in your memory forever.
+
+This isn't just another flashcard app. It's a meditation in motion, a visual symphony of language learning that makes vocabulary acquisition feel less like studying and more like experiencing art. Built for Russian speakers reaching for English fluency, Word Flow combines the scientific precision of SM-2 spaced repetition (the brain behind Anki) with stunning particle animations that turn every word into a memorable visual event.
+
+**Why words scatter and reform matters:** The human brain remembers motion. By transforming each word through 550-900 individual particles, Word Flow creates a unique visual signature for every term you study. Your mind doesn't just read "accomplish"—it watches it shatter into cosmic dust and rebuild itself, anchoring the word through movement, color, and transformation.
 
 ### Why Word Flow?
 
