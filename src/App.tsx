@@ -616,15 +616,35 @@ function App() {
                       style={{ color: englishWordColor }}
                       animate={{
                         opacity: showTranslation ? 0 : 1,
-                        y: showTranslation ? -20 : 0,
-                        filter: showTranslation ? 'blur(10px)' : 'blur(0px)'
+                        scale: showTranslation ? 0.85 : 1,
+                        filter: showTranslation ? 'blur(20px) opacity(0)' : 'blur(0px) opacity(1)',
+                        rotateX: showTranslation ? 90 : 0,
                       }}
                       transition={{
-                        duration: 0.8,
+                        duration: 0.6,
                         ease: [0.4, 0, 0.2, 1]
                       }}
                     >
-                      {currentWord}
+                      {currentWord.split('').map((char, idx) => (
+                        <motion.span
+                          key={idx}
+                          className="inline-block"
+                          animate={{
+                            opacity: showTranslation ? 0 : 1,
+                            y: showTranslation ? -30 - Math.random() * 20 : 0,
+                            x: showTranslation ? (Math.random() - 0.5) * 40 : 0,
+                            scale: showTranslation ? 0.3 : 1,
+                            filter: showTranslation ? `blur(${8 + Math.random() * 4}px)` : 'blur(0px)',
+                          }}
+                          transition={{
+                            duration: 0.5 + Math.random() * 0.3,
+                            delay: idx * 0.02,
+                            ease: [0.4, 0, 0.2, 1]
+                          }}
+                        >
+                          {char}
+                        </motion.span>
+                      ))}
                     </motion.h1>
                     
                     <motion.h1 
@@ -632,15 +652,35 @@ function App() {
                       style={{ color: russianWordColor }}
                       animate={{
                         opacity: showTranslation ? 1 : 0,
-                        y: showTranslation ? 0 : 20,
-                        filter: showTranslation ? 'blur(0px)' : 'blur(10px)'
+                        scale: showTranslation ? 1 : 0.85,
+                        filter: showTranslation ? 'blur(0px) opacity(1)' : 'blur(20px) opacity(0)',
+                        rotateX: showTranslation ? 0 : -90,
                       }}
                       transition={{
-                        duration: 0.8,
+                        duration: 0.6,
                         ease: [0.4, 0, 0.2, 1]
                       }}
                     >
-                      {currentTranslation}
+                      {currentTranslation.split('').map((char, idx) => (
+                        <motion.span
+                          key={idx}
+                          className="inline-block"
+                          animate={{
+                            opacity: showTranslation ? 1 : 0,
+                            y: showTranslation ? 0 : 30 + Math.random() * 20,
+                            x: showTranslation ? 0 : (Math.random() - 0.5) * 40,
+                            scale: showTranslation ? 1 : 0.3,
+                            filter: showTranslation ? 'blur(0px)' : `blur(${8 + Math.random() * 4}px)`,
+                          }}
+                          transition={{
+                            duration: 0.5 + Math.random() * 0.3,
+                            delay: idx * 0.02,
+                            ease: [0.4, 0, 0.2, 1]
+                          }}
+                        >
+                          {char}
+                        </motion.span>
+                      ))}
                     </motion.h1>
                   </div>
                   
