@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Slider } from '@/components/ui/slider'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
-import { ParticleText } from '@/components/ParticleText'
+import { ParticleMorphText } from '@/components/ParticleMorphText'
 
 const WORD_LIST_URL = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt'
 
@@ -893,47 +893,14 @@ function App() {
                         </motion.h1>
                       </>
                     ) : (
-                      <>
-                        <ParticleText
-                          text={currentWord}
-                          isVisible={!showTranslation}
-                          color={englishWordColor || 'oklch(0.98 0 0)'}
-                          style={particleStyle || 'dust'}
-                        />
-                        <ParticleText
-                          text={currentTranslation}
-                          isVisible={showTranslation}
-                          color={russianWordColor || 'oklch(0.70 0.20 350)'}
-                          style={particleStyle || 'dust'}
-                        />
-                        <motion.h1 
-                          className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4 pointer-events-none"
-                          style={{ color: englishWordColor }}
-                          animate={{
-                            opacity: showTranslation ? 0 : 1,
-                          }}
-                          transition={{
-                            duration: 0.6,
-                            ease: [0.4, 0, 0.2, 1]
-                          }}
-                        >
-                          {currentWord}
-                        </motion.h1>
-                        
-                        <motion.h1 
-                          className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4 pointer-events-none"
-                          style={{ color: russianWordColor }}
-                          animate={{
-                            opacity: showTranslation ? 1 : 0,
-                          }}
-                          transition={{
-                            duration: 0.6,
-                            ease: [0.4, 0, 0.2, 1]
-                          }}
-                        >
-                          {currentTranslation}
-                        </motion.h1>
-                      </>
+                      <ParticleMorphText
+                        textA={currentWord}
+                        textB={currentTranslation || currentWord}
+                        showB={showTranslation}
+                        colorA={englishWordColor || 'oklch(0.98 0 0)'}
+                        colorB={russianWordColor || 'oklch(0.70 0.20 350)'}
+                        style={particleStyle || 'dust'}
+                      />
                     )}
                   </div>
                   
