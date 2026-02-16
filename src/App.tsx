@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge, Palette, Repeat } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge, Palette, Repeat, Atom } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Slider } from '@/components/ui/slider'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
+import { ParticleText } from '@/components/ParticleText'
 
 const WORD_LIST_URL = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt'
 
@@ -59,12 +60,14 @@ function App() {
   const [showDefinitionSpeedControl, setShowDefinitionSpeedControl] = useState(false)
   const [showColorControl, setShowColorControl] = useState(false)
   const [showRepeatControl, setShowRepeatControl] = useState(false)
+  const [showParticleControl, setShowParticleControl] = useState(false)
   const [englishWordColor, setEnglishWordColor] = useKV<string>('english-word-color', 'oklch(0.98 0 0)')
   const [russianWordColor, setRussianWordColor] = useKV<string>('russian-word-color', 'oklch(0.70 0.20 350)')
   const [englishDefinitionColor, setEnglishDefinitionColor] = useKV<string>('english-definition-color', 'oklch(0.65 0.05 280)')
   const [russianDefinitionColor, setRussianDefinitionColor] = useKV<string>('russian-definition-color', 'oklch(0.70 0.20 350)')
   const [repeatCount, setRepeatCount] = useKV<number>('repeat-count', 0)
   const [currentRepetition, setCurrentRepetition] = useState(0)
+  const [particleStyle, setParticleStyle] = useKV<'dust' | 'smoke' | 'water' | 'none'>('particle-style', 'dust')
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
@@ -508,6 +511,9 @@ function App() {
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault()
         setShowRepeatControl(prev => !prev)
+      } else if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault()
+        setShowParticleControl(prev => !prev)
       }
     }
 
@@ -611,77 +617,123 @@ function App() {
                   className="text-center w-full flex flex-col h-full justify-center gap-3 sm:gap-6"
                 >
                   <div className="relative flex-1 flex items-center justify-center min-h-0 max-h-[30vh]">
-                    <motion.h1 
-                      className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4"
-                      style={{ color: englishWordColor }}
-                      animate={{
-                        opacity: showTranslation ? 0 : 1,
-                        scale: showTranslation ? 0.85 : 1,
-                        filter: showTranslation ? 'blur(20px) opacity(0)' : 'blur(0px) opacity(1)',
-                        rotateX: showTranslation ? 90 : 0,
-                      }}
-                      transition={{
-                        duration: 0.6,
-                        ease: [0.4, 0, 0.2, 1]
-                      }}
-                    >
-                      {currentWord.split('').map((char, idx) => (
-                        <motion.span
-                          key={idx}
-                          className="inline-block"
+                    {particleStyle === 'none' ? (
+                      <>
+                        <motion.h1 
+                          className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4"
+                          style={{ color: englishWordColor }}
                           animate={{
                             opacity: showTranslation ? 0 : 1,
-                            y: showTranslation ? -30 - Math.random() * 20 : 0,
-                            x: showTranslation ? (Math.random() - 0.5) * 40 : 0,
-                            scale: showTranslation ? 0.3 : 1,
-                            filter: showTranslation ? `blur(${8 + Math.random() * 4}px)` : 'blur(0px)',
+                            scale: showTranslation ? 0.85 : 1,
+                            filter: showTranslation ? 'blur(20px) opacity(0)' : 'blur(0px) opacity(1)',
+                            rotateX: showTranslation ? 90 : 0,
                           }}
                           transition={{
-                            duration: 0.5 + Math.random() * 0.3,
-                            delay: idx * 0.02,
+                            duration: 0.6,
                             ease: [0.4, 0, 0.2, 1]
                           }}
                         >
-                          {char}
-                        </motion.span>
-                      ))}
-                    </motion.h1>
-                    
-                    <motion.h1 
-                      className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4"
-                      style={{ color: russianWordColor }}
-                      animate={{
-                        opacity: showTranslation ? 1 : 0,
-                        scale: showTranslation ? 1 : 0.85,
-                        filter: showTranslation ? 'blur(0px) opacity(1)' : 'blur(20px) opacity(0)',
-                        rotateX: showTranslation ? 0 : -90,
-                      }}
-                      transition={{
-                        duration: 0.6,
-                        ease: [0.4, 0, 0.2, 1]
-                      }}
-                    >
-                      {currentTranslation.split('').map((char, idx) => (
-                        <motion.span
-                          key={idx}
-                          className="inline-block"
+                          {currentWord.split('').map((char, idx) => (
+                            <motion.span
+                              key={idx}
+                              className="inline-block"
+                              animate={{
+                                opacity: showTranslation ? 0 : 1,
+                                y: showTranslation ? -30 - Math.random() * 20 : 0,
+                                x: showTranslation ? (Math.random() - 0.5) * 40 : 0,
+                                scale: showTranslation ? 0.3 : 1,
+                                filter: showTranslation ? `blur(${8 + Math.random() * 4}px)` : 'blur(0px)',
+                              }}
+                              transition={{
+                                duration: 0.5 + Math.random() * 0.3,
+                                delay: idx * 0.02,
+                                ease: [0.4, 0, 0.2, 1]
+                              }}
+                            >
+                              {char}
+                            </motion.span>
+                          ))}
+                        </motion.h1>
+                        
+                        <motion.h1 
+                          className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4"
+                          style={{ color: russianWordColor }}
                           animate={{
                             opacity: showTranslation ? 1 : 0,
-                            y: showTranslation ? 0 : 30 + Math.random() * 20,
-                            x: showTranslation ? 0 : (Math.random() - 0.5) * 40,
-                            scale: showTranslation ? 1 : 0.3,
-                            filter: showTranslation ? 'blur(0px)' : `blur(${8 + Math.random() * 4}px)`,
+                            scale: showTranslation ? 1 : 0.85,
+                            filter: showTranslation ? 'blur(0px) opacity(1)' : 'blur(20px) opacity(0)',
+                            rotateX: showTranslation ? 0 : -90,
                           }}
                           transition={{
-                            duration: 0.5 + Math.random() * 0.3,
-                            delay: idx * 0.02,
+                            duration: 0.6,
                             ease: [0.4, 0, 0.2, 1]
                           }}
                         >
-                          {char}
-                        </motion.span>
-                      ))}
-                    </motion.h1>
+                          {currentTranslation.split('').map((char, idx) => (
+                            <motion.span
+                              key={idx}
+                              className="inline-block"
+                              animate={{
+                                opacity: showTranslation ? 1 : 0,
+                                y: showTranslation ? 0 : 30 + Math.random() * 20,
+                                x: showTranslation ? 0 : (Math.random() - 0.5) * 40,
+                                scale: showTranslation ? 1 : 0.3,
+                                filter: showTranslation ? 'blur(0px)' : `blur(${8 + Math.random() * 4}px)`,
+                              }}
+                              transition={{
+                                duration: 0.5 + Math.random() * 0.3,
+                                delay: idx * 0.02,
+                                ease: [0.4, 0, 0.2, 1]
+                              }}
+                            >
+                              {char}
+                            </motion.span>
+                          ))}
+                        </motion.h1>
+                      </>
+                    ) : (
+                      <>
+                        <ParticleText
+                          text={currentWord}
+                          isVisible={!showTranslation}
+                          color={englishWordColor || 'oklch(0.98 0 0)'}
+                          style={particleStyle || 'dust'}
+                        />
+                        <ParticleText
+                          text={currentTranslation}
+                          isVisible={showTranslation}
+                          color={russianWordColor || 'oklch(0.70 0.20 350)'}
+                          style={particleStyle || 'dust'}
+                        />
+                        <motion.h1 
+                          className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4 pointer-events-none"
+                          style={{ color: englishWordColor }}
+                          animate={{
+                            opacity: showTranslation ? 0 : 1,
+                          }}
+                          transition={{
+                            duration: 0.6,
+                            ease: [0.4, 0, 0.2, 1]
+                          }}
+                        >
+                          {currentWord}
+                        </motion.h1>
+                        
+                        <motion.h1 
+                          className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight absolute px-4 pointer-events-none"
+                          style={{ color: russianWordColor }}
+                          animate={{
+                            opacity: showTranslation ? 1 : 0,
+                          }}
+                          transition={{
+                            duration: 0.6,
+                            ease: [0.4, 0, 0.2, 1]
+                          }}
+                        >
+                          {currentTranslation}
+                        </motion.h1>
+                      </>
+                    )}
                   </div>
                   
                   <div className="flex items-center justify-center gap-2 sm:gap-3 flex-shrink-0">
@@ -1179,6 +1231,94 @@ function App() {
                       </div>
                     </PopoverContent>
                   </Popover>
+
+                  <Popover open={showParticleControl} onOpenChange={setShowParticleControl}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="group text-foreground hover:text-foreground/80 transition-all hover:scale-110 active:scale-95 h-8 w-8 sm:h-10 sm:w-10 p-0 relative"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Atom weight="fill" className="text-xl sm:text-2xl" />
+                        </motion.div>
+                        {particleStyle !== 'dust' && (
+                          <Badge 
+                            variant="secondary" 
+                            className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[8px] sm:h-5 sm:min-w-5 sm:text-[10px] bg-accent text-accent-foreground"
+                          >
+                            {particleStyle === 'smoke' ? 'S' : particleStyle === 'water' ? 'W' : 'N'}
+                          </Badge>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-card/95 backdrop-blur-xl border-border/50" align="center">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <h4 className="font-heading font-semibold text-lg">Стиль частиц</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Выберите визуальный эффект трансформации слов
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            { name: 'Пыль', value: 'dust' as const, desc: 'Мелкие квадратные частицы' },
+                            { name: 'Дым', value: 'smoke' as const, desc: 'Плавные облака, поднимающиеся вверх' },
+                            { name: 'Вода', value: 'water' as const, desc: 'Капли с эффектом жидкости' },
+                            { name: 'Без эффекта', value: 'none' as const, desc: 'Стандартная анимация' },
+                          ].map((style) => (
+                            <button
+                              key={style.value}
+                              onClick={() => {
+                                setParticleStyle(style.value)
+                                toast.success(`Стиль: ${style.name}`)
+                              }}
+                              className={`relative p-4 rounded-lg border-2 transition-all hover:scale-105 active:scale-95 text-left ${
+                                particleStyle === style.value
+                                  ? 'border-secondary bg-secondary/20'
+                                  : 'border-border/50 bg-muted/20 hover:border-secondary/50'
+                              }`}
+                            >
+                              <div className="space-y-1">
+                                <div className="font-medium text-sm flex items-center justify-between">
+                                  {style.name}
+                                  {particleStyle === style.value && (
+                                    <Check weight="bold" className="text-secondary" size={16} />
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {style.desc}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              setParticleStyle('dust')
+                              toast.success('Сброшено: Пыль')
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Сбросить
+                          </Button>
+                          <Button
+                            onClick={() => setShowParticleControl(false)}
+                            size="sm"
+                            className="flex-1 bg-primary hover:bg-primary/90"
+                          >
+                            Готово
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   </div>
 
                   <motion.div
@@ -1295,7 +1435,8 @@ function App() {
             <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">S</kbd> speed • 
             <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">D</kbd> def speed • 
             <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">C</kbd> colors • 
-            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">R</kbd> repeats
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">R</kbd> repeats • 
+            <kbd className="px-1.5 py-0.5 bg-muted/50 rounded text-xs">A</kbd> particles
           </p>
         </div>
       </div>
