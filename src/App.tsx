@@ -37,10 +37,12 @@ function App() {
   const [definitionCache, setDefinitionCache] = useKV<DefinitionCache>('definition-cache', {})
   const [russianDefinitionCache, setRussianDefinitionCache] = useKV<RussianDefinitionCache>('russian-definition-cache', {})
   const [learnedWords, setLearnedWords] = useKV<LearnedWords>('learned-words', {})
+  const [hasSeenGuide, setHasSeenGuide] = useKV<boolean>('has-seen-guide', false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showCompletion, setShowCompletion] = useState(false)
   const [showStats, setShowStats] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const [direction, setDirection] = useState(0)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [showTranslation, setShowTranslation] = useState(false)
@@ -83,6 +85,12 @@ function App() {
       speechSynthRef.current = window.speechSynthesis
     }
   }, [])
+
+  useEffect(() => {
+    if (!hasSeenGuide && !isLoading) {
+      setShowGuide(true)
+    }
+  }, [hasSeenGuide, isLoading])
 
   const speakWord = useCallback((word: string) => {
     if (!speechSynthRef.current) {
@@ -572,6 +580,15 @@ function App() {
             >
               <ChartBar className="sm:mr-2" weight="bold" size={18} />
               <span className="hidden sm:inline">Stats</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowGuide(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors h-8 px-2 sm:px-3"
+              title="Показать гайд"
+            >
+              <span className="text-base sm:text-lg">❓</span>
             </Button>
           </div>
           <Button
@@ -1502,6 +1519,123 @@ function App() {
           <DialogFooter>
             <Button onClick={restart} className="bg-accent hover:bg-accent/90 text-accent-foreground">
               Start Over
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showGuide} onOpenChange={(open) => {
+        setShowGuide(open)
+        if (!open && !hasSeenGuide) {
+          setHasSeenGuide(true)
+        }
+      }}>
+        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50 max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-heading text-center mb-2">
+              👋 Добро пожаловать в Word Flow!
+            </DialogTitle>
+            <DialogDescription className="text-base text-center">
+              Изучайте английские слова с умными визуальными подсказками
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            <div className="space-y-4">
+              <div className="flex gap-4 items-start">
+                <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🔄</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-heading text-lg font-semibold mb-1">Автоматическая трансформация</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Слова автоматически чередуются между английским и русским переводом. Определения также трансформируются между языками для лучшего запоминания.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="w-12 h-12 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">⌨️</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-heading text-lg font-semibold mb-1">Горячие клавиши</h3>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> / <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> - навигация по словам</p>
+                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Y</kbd> - отметить слово как изученное</p>
+                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> - отметить для повторения</p>
+                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> - пауза/возобновить</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="w-12 h-12 rounded-full bg-accent/20 border-2 border-accent flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">⚙️</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-heading text-lg font-semibold mb-1">Настройки</h3>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> - скорость трансформации слов</p>
+                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">D</kbd> - скорость трансформации определений</p>
+                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">C</kbd> - настройка цветов</p>
+                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">R</kbd> - автоповторения</p>
+                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">A</kbd> - стиль частиц (пыль, дым, вода)</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="w-12 h-12 rounded-full bg-foreground/10 border-2 border-foreground/30 flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🎨</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-heading text-lg font-semibold mb-1">Визуальные эффекты</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Выберите стиль частиц для анимации: пыль (квадратные частицы), дым (плавные облака), вода (капли) или отключите эффект для стандартной анимации.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">📊</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-heading text-lg font-semibold mb-1">Прогресс</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Отслеживайте свой прогресс через кнопку "Stats" - смотрите количество изученных слов, слов для повторения и общий процент освоения.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-accent/10 border border-accent/30 rounded-lg p-4">
+              <p className="text-sm text-center">
+                <strong className="text-accent">Совет:</strong> Начните с медленной скорости и постепенно увеличивайте её по мере привыкания к системе.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              onClick={() => {
+                setShowGuide(false)
+                setHasSeenGuide(true)
+              }} 
+              className="bg-primary hover:bg-primary/90 w-full"
+            >
+              Начать обучение
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setHasSeenGuide(false)
+                setShowGuide(false)
+              }} 
+              className="w-full sm:w-auto"
+            >
+              Показать снова при следующем запуске
             </Button>
           </DialogFooter>
         </DialogContent>
