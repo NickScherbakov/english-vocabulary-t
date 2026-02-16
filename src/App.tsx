@@ -343,6 +343,8 @@ function App() {
               }
               return newRep
             })
+          } else {
+            speakWord(currentWord)
           }
           return newValue
         })
