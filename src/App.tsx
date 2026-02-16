@@ -1080,7 +1080,7 @@ function App() {
                                   { name: 'Лимонный', color: 'oklch(0.85 0.18 105)' },
                                   { name: 'Янтарный', color: 'oklch(0.70 0.18 65)' },
                                   { name: 'Пурпурный', color: 'oklch(0.65 0.22 320)' },
-                                ].map((preset) => (
+                                  <button
                                   <button
                                     key={preset.name}
                                     onClick={() => {
