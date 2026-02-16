@@ -540,7 +540,6 @@ function App() {
 
   const revealQuiz = useCallback(() => {
     setQuizRevealed(true)
-    setShowTranslation(true)
     speakWord(currentWord)
   }, [speakWord, currentWord])
 
@@ -1565,7 +1564,7 @@ function App() {
                             <motion.p
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className="text-lg sm:text-xl font-medium text-center"
+                              className="text-2xl sm:text-3xl md:text-4xl font-heading font-bold text-center"
                               style={{ color: russianWordColor }}
                             >
                               {currentTranslation}
@@ -1575,7 +1574,7 @@ function App() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.2 }}
-                                className="text-xs sm:text-sm text-muted-foreground italic text-center max-w-md"
+                                className="text-sm sm:text-base md:text-lg text-muted-foreground italic text-center max-w-md"
                               >
                                 {currentDefinition}
                               </motion.p>
@@ -1585,9 +1584,9 @@ function App() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.3 }}
-                                className="text-xs text-muted-foreground/70 text-center max-w-md border-t border-border/30 pt-2"
+                                className="text-sm sm:text-base text-muted-foreground/80 text-center max-w-md border-t border-border/30 pt-3 mt-1"
                               >
-                                <BookOpen weight="bold" size={12} className="inline mr-1 align-text-bottom" />
+                                <BookOpen weight="bold" size={16} className="inline mr-1.5 align-text-bottom" />
                                 {exampleSentence}
                               </motion.p>
                             )}
@@ -1597,7 +1596,7 @@ function App() {
                                 size="sm"
                                 onClick={() => getExampleSentence(currentWord)}
                                 disabled={isLoadingExample}
-                                className="text-xs text-muted-foreground/50 hover:text-muted-foreground h-6 px-2"
+                                className="text-sm text-muted-foreground/50 hover:text-muted-foreground h-8 px-3"
                               >
                                 {isLoadingExample ? (
                                   <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin mr-1" />
