@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge, Palette, Repeat, Atom } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, ArrowCounterClockwise, SpeakerHigh, Check, X, ChartBar, Pause, Play, Gauge, Palette, Repeat, Atom, Shuffle, Fire } from '@phosphor-icons/react'
+import { useSwipe } from '@/hooks/use-swipe'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -71,15 +72,41 @@ function App() {
   const [currentRepetition, setCurrentRepetition] = useState(0)
   const [particleStyle, setParticleStyle] = useKV<'dust' | 'smoke' | 'water' | 'none'>('particle-style', 'dust')
   const [guideLanguage, setGuideLanguage] = useKV<'en' | 'ru'>('guide-language', 'ru')
+  const [reviewMode, setReviewMode] = useState(false)
+  const [lastStudyDate, setLastStudyDate] = useKV<string>('last-study-date', '')
+  const [streakCount, setStreakCount] = useKV<number>('streak-count', 0)
+  const [wordsStudiedToday, setWordsStudiedToday] = useKV<number>('words-studied-today', 0)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
   const definitionAlternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const definitionIntervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
 
-  const wordList = words || []
-  const index = currentIndex || 0
+  const allWords = words || []
+  const reviewWordsList = reviewMode
+    ? allWords.filter(w => (learnedWords || {})[w] === false)
+    : allWords
+  const wordList = reviewWordsList.length > 0 ? reviewWordsList : allWords
+  const index = Math.min(currentIndex || 0, wordList.length - 1)
   const currentWord = wordList[index] || ''
+
+  // Daily streak tracking
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const last = lastStudyDate || ''
+    if (last !== today) {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+      if (last === yesterday) {
+        setStreakCount((s = 0) => s + 1)
+      } else if (last && last !== today) {
+        setStreakCount(1)
+      } else if (!last) {
+        setStreakCount(1)
+      }
+      setLastStudyDate(today)
+      setWordsStudiedToday(0)
+    }
+  }, [lastStudyDate, setLastStudyDate, setStreakCount, setWordsStudiedToday])
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -470,6 +497,7 @@ function App() {
       ...current,
       [word]: learned
     }))
+    setWordsStudiedToday((c = 0) => c + 1)
     
     if (learned) {
       toast.success('Word marked as learned! 🎉')
@@ -477,7 +505,7 @@ function App() {
     } else {
       toast('Marked for review')
     }
-  }, [setLearnedWords, goToNext, stopAlternation])
+  }, [setLearnedWords, goToNext, stopAlternation, setWordsStudiedToday])
 
   const restart = useCallback(() => {
     stopAlternation()
@@ -494,6 +522,8 @@ function App() {
   const reviewCount = Object.values(learned).filter(v => v === false).length
   const isCurrentWordLearned = learned[currentWord] === true
   const isCurrentWordMarked = learned[currentWord] === false
+
+  const swipeHandlers = useSwipe(goToNext, goToPrevious, 50)
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -573,6 +603,12 @@ function App() {
             <Badge variant="secondary" className="text-xs sm:text-sm tracking-wider bg-card/80 backdrop-blur-sm border-border/50">
               {index + 1}/{wordList.length}
             </Badge>
+            {(streakCount || 0) > 0 && (
+              <Badge variant="outline" className="text-xs tracking-wider bg-accent/20 border-accent/40 text-accent gap-1">
+                <Fire weight="fill" size={14} />
+                {streakCount}
+              </Badge>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -582,6 +618,26 @@ function App() {
               <ChartBar className="sm:mr-2" weight="bold" size={18} />
               <span className="hidden sm:inline">Stats</span>
             </Button>
+            {reviewCount > 0 && (
+              <Button
+                variant={reviewMode ? "default" : "ghost"}
+                size="sm"
+                onClick={() => {
+                  setReviewMode(prev => !prev)
+                  setCurrentIndex(0)
+                  toast(reviewMode ? 'All words mode' : `Review mode: ${reviewCount} words`)
+                }}
+                className={`transition-colors h-8 px-2 sm:px-3 ${
+                  reviewMode 
+                    ? 'bg-destructive/80 hover:bg-destructive text-destructive-foreground' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title={reviewMode ? 'Show all words' : 'Show only review words'}
+              >
+                <Shuffle className="sm:mr-2" weight="bold" size={18} />
+                <span className="hidden sm:inline">{reviewMode ? 'All' : 'Review'}</span>
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -609,7 +665,12 @@ function App() {
         />
 
         <div className="relative flex-1 flex flex-col min-h-0">
-          <Card className="relative overflow-hidden bg-card/60 backdrop-blur-2xl border-border/50 shadow-2xl h-full flex flex-col">
+          <Card 
+            className="relative overflow-hidden bg-card/60 backdrop-blur-2xl border-border/50 shadow-2xl h-full flex flex-col"
+            onTouchStart={swipeHandlers.onTouchStart}
+            onTouchMove={swipeHandlers.onTouchMove}
+            onTouchEnd={swipeHandlers.onTouchEnd}
+          >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 pointer-events-none" />
             
             <div className="relative p-4 sm:p-8 md:p-12 flex-1 flex items-center justify-center min-h-0">
@@ -1489,6 +1550,24 @@ function App() {
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary">{wordList.length}</div>
                   <div className="text-sm text-muted-foreground mt-1">Total</div>
+                </div>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="p-4 bg-accent/20 border-accent/30">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-accent flex items-center justify-center gap-1">
+                    <Fire weight="fill" size={22} />
+                    {streakCount || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">Day Streak</div>
+                </div>
+              </Card>
+              <Card className="p-4 bg-secondary/20 border-secondary/30">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-secondary">{wordsStudiedToday || 0}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Today</div>
                 </div>
               </Card>
             </div>
