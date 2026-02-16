@@ -74,6 +74,10 @@ function App() {
   const definitionAlternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const definitionIntervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
 
+  const wordList = words || []
+  const index = currentIndex || 0
+  const currentWord = wordList[index] || ''
+
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       speechSynthRef.current = window.speechSynthesis
@@ -325,6 +329,7 @@ function App() {
         setShowTranslation(prev => {
           const newValue = !prev
           if (newValue === false) {
+            speakWord(currentWord)
             setCurrentRepetition(prevRep => {
               const newRep = prevRep + 1
               const targetRepeatCount = repeatCount || 0
@@ -352,7 +357,7 @@ function App() {
         clearTimeout(alternationTimerRef.current)
       }
     }
-  }, [currentTranslation, isAlternating, isPaused, transformationsPerMinute, repeatCount, goToNext])
+  }, [currentTranslation, isAlternating, isPaused, transformationsPerMinute, repeatCount, goToNext, speakWord, currentWord])
 
   useEffect(() => {
     if (!currentRussianDefinition || !currentDefinition || !isAlternating || isPaused) return
@@ -471,9 +476,6 @@ function App() {
     setDirection(-1)
   }, [setCurrentIndex, stopAlternation])
 
-  const wordList = words || []
-  const index = currentIndex || 0
-  const currentWord = wordList[index] || ''
   const progress = wordList.length > 0 ? ((index + 1) / wordList.length) * 100 : 0
   
   const learned = learnedWords || {}
