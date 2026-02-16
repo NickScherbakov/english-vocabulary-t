@@ -70,6 +70,7 @@ function App() {
   const [repeatCount, setRepeatCount] = useKV<number>('repeat-count', 0)
   const [currentRepetition, setCurrentRepetition] = useState(0)
   const [particleStyle, setParticleStyle] = useKV<'dust' | 'smoke' | 'water' | 'none'>('particle-style', 'dust')
+  const [guideLanguage, setGuideLanguage] = useKV<'en' | 'ru'>('guide-language', 'ru')
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const alternationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const intervalDecreaseRef = useRef<NodeJS.Timeout | null>(null)
@@ -1532,87 +1533,182 @@ function App() {
       }}>
         <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50 max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-heading text-center mb-2">
-              👋 Добро пожаловать в Word Flow!
-            </DialogTitle>
+            <div className="flex items-center justify-between mb-2">
+              <DialogTitle className="text-3xl font-heading text-center flex-1">
+                {guideLanguage === 'ru' ? '👋 Добро пожаловать в Word Flow!' : '👋 Welcome to Word Flow!'}
+              </DialogTitle>
+              <div className="flex gap-1 flex-shrink-0">
+                <Button
+                  variant={guideLanguage === 'en' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setGuideLanguage('en')}
+                  className="h-8 px-3 text-xs"
+                >
+                  EN
+                </Button>
+                <Button
+                  variant={guideLanguage === 'ru' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setGuideLanguage('ru')}
+                  className="h-8 px-3 text-xs"
+                >
+                  RU
+                </Button>
+              </div>
+            </div>
             <DialogDescription className="text-base text-center">
-              Изучайте английские слова с умными визуальными подсказками
+              {guideLanguage === 'ru' 
+                ? 'Изучайте английские слова с умными визуальными подсказками'
+                : 'Learn English vocabulary with smart visual cues'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6 py-4">
-            <div className="space-y-4">
-              <div className="flex gap-4 items-start">
-                <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🔄</span>
+            {guideLanguage === 'ru' ? (
+              <div className="space-y-4">
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">🔄</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Автоматическая трансформация</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Слова автоматически чередуются между английским и русским переводом. Определения также трансформируются между языками для лучшего запоминания.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-heading text-lg font-semibold mb-1">Автоматическая трансформация</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Слова автоматически чередуются между английским и русским переводом. Определения также трансформируются между языками для лучшего запоминания.
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex gap-4 items-start">
-                <div className="w-12 h-12 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">⌨️</span>
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">⌨️</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Горячие клавиши</h3>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> / <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> - навигация по словам</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Y</kbd> - отметить слово как изученное</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> - отметить для повторения</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> - пауза/возобновить</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-heading text-lg font-semibold mb-1">Горячие клавиши</h3>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> / <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> - навигация по словам</p>
-                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Y</kbd> - отметить слово как изученное</p>
-                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> - отметить для повторения</p>
-                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> - пауза/возобновить</p>
+
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-accent/20 border-2 border-accent flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">⚙️</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Настройки</h3>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> - скорость трансформации слов</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">D</kbd> - скорость трансформации определений</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">C</kbd> - настройка цветов</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">R</kbd> - автоповторения</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">A</kbd> - стиль частиц (пыль, дым, вода)</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-foreground/10 border-2 border-foreground/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">🎨</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Визуальные эффекты</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Выберите стиль частиц для анимации: пыль (квадратные частицы), дым (плавные облака), вода (капли) или отключите эффект для стандартной анимации.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">📊</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Прогресс</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Отслеживайте свой прогресс через кнопку "Stats" - смотрите количество изученных слов, слов для повторения и общий процент освоения.
+                    </p>
                   </div>
                 </div>
               </div>
-
-              <div className="flex gap-4 items-start">
-                <div className="w-12 h-12 rounded-full bg-accent/20 border-2 border-accent flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">⚙️</span>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">🔄</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Automatic Transformation</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Words automatically alternate between English and Russian translation. Definitions also transform between languages for better retention.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-heading text-lg font-semibold mb-1">Настройки</h3>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> - скорость трансформации слов</p>
-                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">D</kbd> - скорость трансформации определений</p>
-                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">C</kbd> - настройка цветов</p>
-                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">R</kbd> - автоповторения</p>
-                    <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">A</kbd> - стиль частиц (пыль, дым, вода)</p>
+
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">⌨️</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Keyboard Shortcuts</h3>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">←</kbd> / <kbd className="px-2 py-1 bg-muted/50 rounded text-xs">→</kbd> - navigate words</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">Y</kbd> - mark word as learned</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">N</kbd> - mark for review</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">P</kbd> - pause/resume</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-accent/20 border-2 border-accent flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">⚙️</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Settings</h3>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">S</kbd> - word transformation speed</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">D</kbd> - definition transformation speed</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">C</kbd> - color settings</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">R</kbd> - auto-repeat count</p>
+                      <p><kbd className="px-2 py-1 bg-muted/50 rounded text-xs">A</kbd> - particle style (dust, smoke, water)</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-foreground/10 border-2 border-foreground/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">🎨</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Visual Effects</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Choose particle style for animation: dust (square particles), smoke (smooth clouds), water (droplets), or disable effects for standard animation.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 items-start">
+                  <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">📊</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold mb-1">Progress</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Track your progress via the "Stats" button - see the number of learned words, words for review, and overall completion percentage.
+                    </p>
                   </div>
                 </div>
               </div>
-
-              <div className="flex gap-4 items-start">
-                <div className="w-12 h-12 rounded-full bg-foreground/10 border-2 border-foreground/30 flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🎨</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-heading text-lg font-semibold mb-1">Визуальные эффекты</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Выберите стиль частиц для анимации: пыль (квадратные частицы), дым (плавные облака), вода (капли) или отключите эффект для стандартной анимации.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4 items-start">
-                <div className="w-12 h-12 rounded-full bg-secondary/20 border-2 border-secondary flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">📊</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-heading text-lg font-semibold mb-1">Прогресс</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Отслеживайте свой прогресс через кнопку "Stats" - смотрите количество изученных слов, слов для повторения и общий процент освоения.
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
 
             <div className="bg-accent/10 border border-accent/30 rounded-lg p-4">
               <p className="text-sm text-center">
-                <strong className="text-accent">Совет:</strong> Начните с медленной скорости и постепенно увеличивайте её по мере привыкания к системе.
+                <strong className="text-accent">{guideLanguage === 'ru' ? 'Совет:' : 'Tip:'}</strong> {guideLanguage === 'ru' 
+                  ? 'Начните с медленной скорости и постепенно увеличивайте её по мере привыкания к системе.'
+                  : 'Start with a slow speed and gradually increase it as you get comfortable with the system.'}
               </p>
             </div>
           </div>
@@ -1625,7 +1721,7 @@ function App() {
               }} 
               className="bg-primary hover:bg-primary/90 w-full"
             >
-              Начать обучение
+              {guideLanguage === 'ru' ? 'Начать обучение' : 'Start Learning'}
             </Button>
             <Button 
               variant="outline"
@@ -1635,7 +1731,7 @@ function App() {
               }} 
               className="w-full sm:w-auto"
             >
-              Показать снова при следующем запуске
+              {guideLanguage === 'ru' ? 'Показать снова при следующем запуске' : 'Show again on next start'}
             </Button>
           </DialogFooter>
         </DialogContent>
